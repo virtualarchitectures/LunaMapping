@@ -68,6 +68,10 @@ public class Scene {
 			currentMediaCalibration = 0;
 	}
 
+    void delMedia(int index) {
+        mediaItems.remove(index);
+    }
+
 	XML saveXML() {
 		XML xml = new XML("Scene");
 		for (MediaItem media : mediaItems) {

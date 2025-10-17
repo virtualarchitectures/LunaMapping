@@ -50,7 +50,7 @@ public class MediaItem {
 	/** Video flag */
 	private final boolean isVideo;
 	private boolean loaded = false;
-	private boolean isLooping = true;
+	private boolean isLooping = false;
 	/** Video object (for movies) */
 	private Movie movie;
 	/** Graphics buffer for rendering */
@@ -69,7 +69,7 @@ public class MediaItem {
 	Group controlGroup;
 	boolean controlsVisible = false;
 
-    private LunaContentGenerator generator;
+    public LunaContentGenerator generator;
     private final boolean isGenerative;
     private float t;
 	/**
@@ -109,8 +109,6 @@ public class MediaItem {
 		this.mediaId = mediaXML.getInt("id");
 		this.vm = new VidMap(p, fileName); // Pass fileName to vm
 		initVariables();
-		// this.mediaWidth = mediaXML.getInt("width");
-		// this.mediaHeight = mediaXML.getInt("height");
 		updateFromXML(mediaXML);
 		loaded = true;
         isGenerative = false;
@@ -128,8 +126,32 @@ public class MediaItem {
         this.assignedScreen = screenIndex;
         this.mediaId = mediaId;
         this.vm = new VidMap(p, fileName); // Pass fileName to vm
+
+        PApplet.println("=== MediaItem Constructor ===");
+        PApplet.println("Generator: " + generator.getName());
+        PApplet.println("Screen index: " + screenIndex);
+        PApplet.println("Media ID: " + mediaId);
+
         initVariables();
     }
+
+    public MediaItem(PApplet p, LunaContentGenerator generator, XML mediaXML) {
+        // PApplet.println("Start MediaItem");
+        this.p = p;
+        this.fileName = generator.getName();
+        this.isVideo = false;
+        isGenerative = true;
+        this.generator = generator;
+        t = 0;
+        // this.sceneIndex = sceneIndex;
+        this.assignedScreen = mediaXML.getInt("Screen");
+        this.mediaId = mediaXML.getInt("id");
+        this.vm = new VidMap(p, fileName); // Pass fileName to vm
+        initVariables();
+        updateFromXML(mediaXML);
+        loaded = true;
+    }
+
     boolean isGenerative(){
         return isGenerative;
     }
@@ -142,6 +164,10 @@ public class MediaItem {
 		xml.setInt("id", mediaId);
 		xml.setInt("width", mediaWidth);
 		xml.setInt("height", mediaHeight);
+        int intGen;
+        if (isGenerative) intGen =1;
+        else intGen = 0;
+        xml.setInt("isGenerator",intGen);
 		if (vm.xyN[0] != null)
 			xml.addChild(arrayToXML("xyN", vm.xyN));
 		if (vm.uvN[0] != null)
@@ -198,7 +224,7 @@ public class MediaItem {
 		// Video controls
 
 		if (isVideo) {
-			cp5.addButton("play" + controlGroup.getName()).setPosition(10, 80).setSize(60, 20).setCaptionLabel("Play")
+			cp5.addButton("play" + controlGroup.getName()).setPosition(10, 80).setSize(30, 20).setCaptionLabel("Play")
 					.setGroup(controlGroup).addCallback(new CallbackListener() {
 						public void controlEvent(CallbackEvent event) {
 							if (event.getAction() == ControlP5.ACTION_RELEASE) {
@@ -208,19 +234,26 @@ public class MediaItem {
 							}
 						}
 					});
-		}
-
-		if (isVideo) {
-			cp5.addButton("stop" + controlGroup.getName()).setPosition(80, 80).setSize(60, 20).setCaptionLabel("Stop")
-					.setGroup(controlGroup).addCallback(new CallbackListener() {
-						public void controlEvent(CallbackEvent event) {
-							if (event.getAction() == ControlP5.ACTION_RELEASE) {
-								// println("Bang released: " + event.getController().getName());
-								// Your function call here
-								stopMedia();
-							}
-						}
-					});
+            cp5.addButton("stop" + controlGroup.getName()).setPosition(45, 80).setSize(30, 20).setCaptionLabel("Stop")
+                    .setGroup(controlGroup).addCallback(new CallbackListener() {
+                        public void controlEvent(CallbackEvent event) {
+                            if (event.getAction() == ControlP5.ACTION_RELEASE) {
+                                // println("Bang released: " + event.getController().getName());
+                                // Your function call here
+                                stopMedia();
+                            }
+                        }
+                    });
+            cp5.addButton("loop" + controlGroup.getName()).setPosition(80, 80).setSize(30, 20).setCaptionLabel("Loop")
+                    .setGroup(controlGroup).addCallback(new CallbackListener() {
+                        public void controlEvent(CallbackEvent event) {
+                            if (event.getAction() == ControlP5.ACTION_RELEASE) {
+                                // println("Bang released: " + event.getController().getName());
+                                // Your function call here
+                                loopMedia();
+                            }
+                        }
+                    });
 		}
 	}
 
@@ -244,15 +277,15 @@ public class MediaItem {
 		if (isVideo) {
 			// PApplet.println("is video");
 			this.movie = new Movie(p, filePath);
-			movie.loop(); // Preload the movie (optional)
+			movie.play(); // Preload the movie (optional)
 			mediaWidth = movie.width;
 			mediaHeight = movie.height;
 			thumbnail = p.createImage(150, 100, PConstants.RGB);
 
 		} else if (isGenerative){
             // PApplet.println("MediaItem is picture");
-            mediaWidth = 0;
-            mediaHeight = 0;
+//            mediaWidth = 0;
+//            mediaHeight = 0;
             thumbnail = p.createImage(150, 100, PConstants.RGB);
         } else{
 			// PApplet.println("MediaItem is picture");
@@ -267,8 +300,10 @@ public class MediaItem {
 	}
 
 	void updateFromXML(XML xml) {
+        PApplet.println(fileName);
 		PVector[] xyNew = arrayFromXML(xml.getChild("xyN"));
 		PVector[] uvNew = arrayFromXML(xml.getChild("uvN"));
+        //PApplet.printArray(uvNew);
 		vm.xyN = arrayFromXML(xml.getChild("xyN"));
 		vm.uvN = arrayFromXML(xml.getChild("uvN"));
 		updateHomography(xyNew, uvNew);
@@ -299,17 +334,28 @@ public class MediaItem {
 		}
 	}
 
-	void assignToDisplay(int w, int h, int screenIndex) {
+	public void assignToDisplay(int w, int h, int screenIndex) {
 		// PApplet.println("MediaItem Assigned to Display: " + screenIndex);
+        PApplet.println("=== assignToDisplay ===");
+        PApplet.println("Received dimensions: " + w + "x" + h);
+        PApplet.println("Screen index: " + screenIndex);
+
 		this.resolutionX = w;
 		this.resolutionY = h;
 		this.mediaCanvas = (PGraphics2D) p.createGraphics(resolutionX, resolutionY, PConstants.P2D);
+
+        PApplet.println("mediaCanvas created: " + mediaCanvas.width + "x" + mediaCanvas.height);
+
 		this.mediaCanvas.beginDraw();
 		this.mediaCanvas.clear();
 		this.mediaCanvas.endDraw();
 		this.assignedScreen = screenIndex;
         if (isGenerative){
+            PApplet.println("Calling generator.setup(" + resolutionX + ", " + resolutionY + ")");
             this.generator.setup(resolutionX,resolutionY);
+            mediaWidth = resolutionX;
+            mediaHeight = resolutionY;
+            PApplet.println("Generator setup complete");
         }
 		vm.assignToDisplay(resolutionX, resolutionY);
 	}
@@ -452,8 +498,6 @@ public class MediaItem {
 	 * Renders the media with homography transformation. Handles both static images
 	 * and video playback.
 	 */
-
-
 	public void render() {
 		mediaCanvas.beginDraw();
 		mediaCanvas.background(0); // Clear previous frame
@@ -472,16 +516,28 @@ public class MediaItem {
 					generateThumbnail();
 					//PApplet.println("Video thumbnail generated");
 				}
+
+                if (movie.time() > (movie.duration()-0.1) && !isLooping) {
+                    stopMedia();
+                    //PApplet.println("Video thumbnail generated");
+                }
 			}
 
 			// Only try to draw if movie is not null
 			mediaCanvas.image(movie, 0, 0, mediaCanvas.width, mediaCanvas.height);
 
 		} else if (isGenerative) {
+            //PApplet.println("Generative");
             this.generator.update();
             //generator.draw(mediaCanvas,t);
             if (generator.getGraphics() != null) {
-                mediaCanvas.image(this.generator.getGraphics(), 0, 0, mediaCanvas.width, mediaCanvas.height);
+                mediaCanvas.image(this.generator.getGraphics(), 0, 0);
+//                if (this.generator.getGraphics().width != mediaCanvas.width || this.generator.getGraphics().height != mediaCanvas.height) {
+//                    PApplet.println("Generator buffer: " + this.generator.getGraphics().width + "x" + this.generator.getGraphics().height);
+//                    PApplet.println("Media canvas: " + mediaCanvas.width + "x" + mediaCanvas.height);
+//                } else{
+//                    PApplet.println("All good" + this.generator.getGraphics().width + "x" + this.generator.getGraphics().height);
+//                }
                 if (!thumbnailGenerated) {
                     generateThumbnail();
                     //PApplet.println("Video thumbnail generated");
@@ -497,7 +553,15 @@ public class MediaItem {
 			}
 		}
 
+
 		mediaCanvas.endDraw();
+
+
+        // Test without any generator content first
+        //image(mediaCanvas, 0, 0);
+
+        // If the red rectangle appears stretched, the issue is in mediaCanvas creation or VidMap
+        // If it appears correct, the issue is in how we're handling the generator content
 
 		// Apply homography transformation using vm
 		if (vm != null) {
@@ -533,13 +597,19 @@ public class MediaItem {
 		if (isVideo) {
 			stopMedia(); // clean up old one first
 			movie = new Movie(p, filePath);
-			if (isLooping) {
-				movie.loop();
-			} else {
-				movie.play();
-			}
+            movie.play();
+            isLooping = false;
 		}
 	}
+
+    public void loopMedia() {
+        if (isVideo) {
+            stopMedia(); // clean up old one first
+            movie = new Movie(p, filePath);
+            movie.loop();
+            isLooping = true;
+        }
+    }
 
 	/**
 	 * Stops media playback. For videos: stops and clears the display.

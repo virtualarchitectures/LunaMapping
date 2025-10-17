@@ -79,13 +79,12 @@ public class VidMap {
 		// println("Finishing VidMap");
 	}
 
-	void assignToDisplay(int w, int h) {
+	public void assignToDisplay(int w, int h) {
 
 		this.resolutionX = w;
 		this.resolutionY = h;
 		pgCanvas = (PGraphics2D) p.createGraphics(resolutionX, resolutionY, PConstants.P2D);
 		pgInput = (PGraphics2D) p.createGraphics(resolutionX, resolutionY, PConstants.P2D);
-		// resetHomography();
 		mapInOut.set("resolution", resolutionX, resolutionY);
 	}
 
@@ -257,8 +256,6 @@ public class VidMap {
 			p.endShape(PConstants.CLOSE);
 		}
 	}
-	
-	
 
 	private PVector normalizedToPreview(PVector normalized) {
 		float x = previewX + normalized.x * previewWidth;

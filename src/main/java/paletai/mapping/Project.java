@@ -12,6 +12,7 @@ import controlP5.*;
 import paletai.generators.LunaContentGenerator;
 import processing.data.XML;
 import java.lang.reflect.*;
+import java.util.Objects;
 
 /**
  * The main container class that manages multiple scenes and transitions.
@@ -52,7 +53,7 @@ public class Project {
 	Group mediaList, screenList, displaysList, sceneList, generatorList;
 	RadioButton screenRadio, sceneRadio;
 	int screenButtonsArea = 30;
-	boolean addSelectScreenBool = false; // to avoid creating a button inside another button
+	boolean addSelectScreenBool = false, removeScreenBol; // to avoid creating a button inside another button
 	boolean addSceneBool = false, removeSceneBol = false;
 
 	// Preview are for Screen Panel
@@ -188,6 +189,9 @@ public class Project {
         PApplet.println("=== Discovery Complete ===\n");
     }
 
+    public ArrayList<LunaContentGenerator> getGenerators(){
+        return availableGenerators;
+    }
     /////// Initilize from XML file
 	void initXMLconfig() {
 		// PApplet.println("init XML config");
@@ -224,17 +228,33 @@ public class Project {
 		XML ScenesParent = xml.getChild("Scenes");
 		XML[] Scenes = ScenesParent.getChildren("Scene");
 		for (XML Scene : Scenes) {
-			// int newSceneId = scenes.size();
-			// PApplet.println("Scenes size: " + scenes.size());
-			// println("Adding a new Scene with index " + newId);
 			Scene newScene = new Scene();
 			XML[] Medias = Scene.getChildren("MediaItem");
 			// PApplet.printArray(Medias);
 			for (XML Media : Medias) {
-				MediaItem newMedia = new MediaItem(mainApplet, Media);
-				int screenId = Media.getInt("Screen");
-				newMedia.assignToDisplay(screens.get(screenId).w, screens.get(screenId).h, screenId);
-				newScene.addMedia(newMedia);
+                int isGen = Media.getInt("isGenerator");
+                if (isGen >0) {
+                    PApplet.println("Found generator saved");
+                    int newMediaId = newScene.mediaItems.size();
+                    //PApplet.println("Add generator?" + newMediaId);
+                    String MediaGeneratorName = Media.getString("name");
+                    PApplet.println(MediaGeneratorName);
+                    for (LunaContentGenerator generator : availableGenerators){
+                        //PApplet.println(generator.getName());
+                        if(Objects.equals(MediaGeneratorName, generator.getName())){
+                            //PApplet.println("Match name: " + MediaGeneratorName + "=" + generator.getName());
+                            GenerativeMediaItem newMedia = new GenerativeMediaItem(mainApplet, generator, Media);
+                            int screenId = Media.getInt("Screen");
+                            newMedia.assignToDisplay(screens.get(screenId).w, screens.get(screenId).h, screenId);
+                            newScene.addMedia(newMedia);
+                        }
+                    }
+                } else {
+                    MediaItem newMedia = new MediaItem(mainApplet, Media);
+                    int screenId = Media.getInt("Screen");
+                    newMedia.assignToDisplay(screens.get(screenId).w, screens.get(screenId).h, screenId);
+                    newScene.addMedia(newMedia);
+                }
 			}
 			scenes.add(newScene);
 		}
@@ -271,6 +291,24 @@ public class Project {
 		addSelectScreenBool = true; // tell ControlP5 to update next time
 	}
 
+    // Delete current new scene
+    void DelCurScreen() {
+        if (screens.size() > 1) {
+            screens.remove(currentScreen);
+            // RemoveSelectSceneButton(currentScene);
+        }
+        removeScreenBol = true;
+        // Update current scene index if needed
+        if (currentScreen >= screens.size()) {
+            currentScreen = screens.size() - 1;
+        }
+
+        // Select the appropriate scene
+        selectScreen(currentScreen);
+        PApplet.println("Delete Screen " + currentScreen);
+
+    }
+
 	// Create a new scene
 	void addNewScene() {
 		// int newSceneId = scenes.size();
@@ -283,7 +321,6 @@ public class Project {
 
 	// Delete current new scene
 	void DelCurScene() {
-		// println("Adding a new Scene with index " + newId);
 		if (scenes.size() > 1 && currentScene >= 0 && currentScene < scenes.size()) {
 			scenes.get(currentScene).deactivate();
 			scenes.remove(currentScene);
@@ -315,7 +352,7 @@ public class Project {
     void addGenerator(LunaContentGenerator newGenerator) {
         int newMediaId = scenes.get(currentScene).mediaItems.size();
         //PApplet.println("Add generator?" + newMediaId);
-        MediaItem newMedia = new MediaItem(mainApplet, newGenerator, currentScreen, newMediaId);
+        GenerativeMediaItem newMedia = new GenerativeMediaItem(mainApplet, newGenerator, currentScreen, newMediaId);
         newMedia.assignToDisplay(screens.get(currentScreen).w, screens.get(currentScreen).h, currentScreen);
         scenes.get(currentScene).addMedia(newMedia);
         scenes.get(currentScene).setThumbnailPosition(2 * r, hy2);
@@ -337,6 +374,11 @@ public class Project {
 			createSceneButtons();
 			removeSceneBol = false;
 		}
+        if (removeScreenBol) {
+            createScreenButtons();
+            removeScreenBol = false;
+        }
+
 	}
 
 	void initializeButtons() {
@@ -348,9 +390,8 @@ public class Project {
         createGeneratorButtons();
 	}
 
-
 	void createAssignDisplayButtons() {  
-	    int DisplayButtonX = hx2 - 8 * r;
+	    int DisplayButtonX = hx2 - 10 * r;
 	    int DisplayButtonHeight = 30;
 
 	    // group container
@@ -362,7 +403,7 @@ public class Project {
 	        .hideBar();
 
 	    // font (could be declared once globally instead)
-	    PFont myFont = mainApplet.createFont("Arial", 14, true);
+	    PFont myFont = mainApplet.createFont("NeueMachina-Regular.otf", 14, true);
 
 	    // add one button per available display
 	    for (int i = 0; i < availableDisplays.size(); i++) {
@@ -370,7 +411,7 @@ public class Project {
 
 	        Bang btn = cp5.addBang("Display " + i)
 	            .setPosition(0, DisplayButtonHeight * i * 2)
-	            .setSize(80, DisplayButtonHeight)  // wider
+	            .setSize(70, DisplayButtonHeight)  // wider
 	            .setGroup(displaysList);
 
 	        // styling
@@ -413,25 +454,25 @@ public class Project {
 		screenList = cp5.addGroup("Screen List")
 				.setPosition(hx1 + r, hy2 - 2 * r - screenButtonsArea)
 				.setBackgroundHeight(screenButtonsArea)
-				.disableCollapse()
-				.hideBar();
+				.disableCollapse();
+				//.hideBar();
 
 		PFont myFont = mainApplet.createFont("Arial", 14, true);
 		
 		 // ---- Add Screen button ----
 	    Button addBtn = cp5.addButton("Add Screen")
 	        .setPosition(r, r)
-	        .setSize(120, screenButtonsArea)   // wider so label fits nicely
-	        .setCaptionLabel("Add Screen")
+	        .setSize(40, screenButtonsArea)   // wider so label fits nicely
+	        .setCaptionLabel("+")
 	        .setGroup(screenList);
 
 	    addBtn.getCaptionLabel()
 	          .setFont(myFont)
 	          .align(ControlP5.CENTER, ControlP5.CENTER);
-	    addBtn.setColorBackground(mainApplet.color(60, 60, 60));
-	    addBtn.setColorForeground(mainApplet.color(90, 90, 90));
-	    addBtn.setColorActive(mainApplet.color(120, 200, 120));
-	    addBtn.setColorLabel(mainApplet.color(255));
+        addBtn.setColorBackground(mainApplet.color(60, 120, 60));
+        addBtn.setColorForeground(mainApplet.color(90, 160, 90));
+        addBtn.setColorActive(mainApplet.color(120, 200, 120));
+        addBtn.setColorLabel(mainApplet.color(255));
 
 	    addBtn.addCallback(new CallbackListener() {
 	        public void controlEvent(CallbackEvent event) {
@@ -440,6 +481,34 @@ public class Project {
 	            }
 	        }
 	    });
+
+        // ---- Add Screen button ----
+        Button delBtn = cp5.addButton("Del Screen")
+                .setPosition(r+50, r)
+                .setSize(40, screenButtonsArea)   // wider so label fits nicely
+                .setCaptionLabel("-")
+                .setGroup(screenList);
+
+        delBtn.getCaptionLabel()
+                .setFont(myFont)
+                .align(ControlP5.CENTER, ControlP5.CENTER);
+//        addBtn.setColorBackground(mainApplet.color(60, 60, 60));
+//        addBtn.setColorForeground(mainApplet.color(90, 90, 90));
+//        addBtn.setColorActive(mainApplet.color(120, 200, 120));
+//        addBtn.setColorLabel(mainApplet.color(255));
+
+        delBtn.setColorBackground(mainApplet.color(150, 60, 60));
+        delBtn.setColorForeground(mainApplet.color(200, 90, 90));
+        delBtn.setColorActive(mainApplet.color(255, 120, 120));
+        delBtn.setColorLabel(mainApplet.color(255));
+
+        delBtn.addCallback(new CallbackListener() {
+            public void controlEvent(CallbackEvent event) {
+                if (event.getAction() == ControlP5.ACTION_RELEASE) {
+                    DelCurScreen();
+                }
+            }
+        });
 	 // ---- Screen selector (radio buttons) ----
 	    if (screenRadio != null) screenRadio.remove();
 	    
@@ -451,7 +520,7 @@ public class Project {
 	            .setColorBackground(mainApplet.color(80))
 	            .setColorForeground(mainApplet.color(120))
 	            .setColorActive(mainApplet.color(0, 200, 100))
-	            .setNoneSelectedAllowed(false);
+	            .setNoneSelectedAllowed(true);
 
 		for (Screen screen : screens) {
 			addSelectScreenButton(screen.id);
@@ -461,7 +530,7 @@ public class Project {
 
 	void addSelectScreenButton(int index) {
 		// PApplet.println("Entered addSelectScreenButtons");
-		String optionName = "Screen " + index;
+		String optionName = "" + index;
 		screenRadio.addItem(optionName, index).setSize(30, 20).setColorActive(mainApplet.color(0, 150, 255))
 				.setColorBackground(mainApplet.color(100)).setColorForeground(mainApplet.color(60));
 
@@ -496,7 +565,6 @@ public class Project {
 			// println("Select Screen: " + currentScreen);
 		}
 	}
-
 
 	void createSceneButtons() {
 	    // remove previous group if it exists
@@ -586,7 +654,6 @@ public class Project {
 	    }
 	}
 
-
 	void addSelectSceneButton(int index) {
 	    String optionName = "Scene " + index;
 
@@ -624,7 +691,6 @@ public class Project {
 	    });
 	}
 
-	
 	void selectScene(int index) {
 		if (index >= 0 && index < scenes.size()) {
 			currentScene = index;
@@ -641,7 +707,6 @@ public class Project {
 		}
 	}
 
-	
 	void createMediaButtons() {
 	    // Create the group container
 	    mediaList = cp5.addGroup("Media List")
@@ -729,7 +794,6 @@ public class Project {
             });
         }
     }
-
 
 	public void render(int mousex, int mousey) {
 		drawUI();
@@ -852,11 +916,6 @@ public class Project {
 				canvaUI.image(media.thumbnail, media.thumbnailX, media.thumbnailY);
 			}
 		}
-//		canvaUI.fill(200);
-//		canvaUI.textSize(40);
-//		canvaUI.textAlign(PConstants.CENTER, PConstants.CENTER);
-//		canvaUI.text("Thumbnails of the added files will be shown here soon", mainWidth / 2, (mainHeight + hy2) / 2);
-
 	}
 
 	public void moveHoverPoint(float mousex, float mousey) {

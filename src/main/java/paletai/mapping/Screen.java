@@ -8,7 +8,7 @@ import processing.core.PConstants;
 import processing.data.XML;
 import processing.opengl.PGraphics2D;
 
-class Screen {
+public class Screen {
 	private PApplet p;
 	int id;
 	int w, h, x, y; // Screen dimensions and position in virtual space
@@ -21,7 +21,7 @@ class Screen {
 	private boolean inTransition = false;
 	private float transitionAlpha = 1.0f;
 
-	Screen(PApplet p, int id) {
+	public Screen(PApplet p, int id) {
 		this.p = p;
 		this.id = id;
 		unassign();
@@ -45,7 +45,7 @@ class Screen {
 		return xml;
 	}
 
-	void updateMediaList(ArrayList<MediaItem> m) {
+	public void updateMediaList(ArrayList<MediaItem> m) {
 		this.mediaItems = new ArrayList<MediaItem>(m);
 		this.inTransition = false;
 	}
@@ -70,7 +70,7 @@ class Screen {
 		}
 	}
 
-	void assignToDisplay(Rectangle bounds) {
+	public void assignToDisplay(Rectangle bounds) {
 		this.w = bounds.width;
 		this.h = bounds.height;
 		this.x = bounds.x;
@@ -84,7 +84,7 @@ class Screen {
 	}
 
 
-	void render(int mousex, int mousey) {
+	public void render(int mousex, int mousey) {
 		int localMousex = mousex;
 		int localMousey = mousey;
 		// Update the offscreen buffer
@@ -92,7 +92,7 @@ class Screen {
 		show();
 	}
 
-	void show() {
+	public void show() {
 		// Draw the buffer at the correct position
 		if (isAssigned) {
 			p.image(pg, x, y);
@@ -102,14 +102,6 @@ class Screen {
 	void updateGraphics(int mousex, int mousey) {
 		pg.beginDraw();
 		pg.background(0);
-//		for (MediaItem media : mediaItems) {
-//			if (media.assignedScreen == id) {
-//				media.checkHover(mousex, mousey);
-//				pg.tint(255, alpha);
-//				pg.image(media.getMediaCanvas(), 0, 0);
-//				pg.noTint();
-//			}
-//		}
 		if (inTransition) {
             // Render transition: current scene fading out, next scene fading in
             renderTransitionMedia(mousex, mousey);
@@ -125,7 +117,9 @@ class Screen {
         for (MediaItem media : mediaItems) {
             if (media.assignedScreen == id) {
                 media.checkHover(mousex, mousey);
-                pg.image(media.getMediaCanvas(), 0, 0);
+                //PApplet.println("Screen pg: " + pg.width + "x" + pg.height);
+                //PApplet.println("Media canvas: " + media.getMediaCanvas().width + "x" + media.getMediaCanvas().height);
+                pg.image(media.getMediaCanvas(), 0, 0, pg.width, pg.height);
             }
         }
     }
@@ -136,7 +130,7 @@ class Screen {
             if (media.assignedScreen == id) {
                 media.checkHover(mousex, mousey);
                 pg.tint(255, 255 * (1 - transitionAlpha)); // Fade out
-                pg.image(media.getMediaCanvas(), 0, 0);
+                pg.image(media.getMediaCanvas(), 0, 0, pg.width, pg.height);
                 pg.noTint();
             }
         }
@@ -146,7 +140,7 @@ class Screen {
             if (media.assignedScreen == id) {
                 media.checkHover(mousex, mousey);
                 pg.tint(255, 255 * transitionAlpha); // Fade in
-                pg.image(media.getMediaCanvas(), 0, 0);
+                pg.image(media.getMediaCanvas(), 0, 0, pg.width, pg.height);
                 pg.noTint();
             }
         }
@@ -168,4 +162,5 @@ class Screen {
 	PGraphics2D getScreen() {
 		return pg;
 	}
+
 }
