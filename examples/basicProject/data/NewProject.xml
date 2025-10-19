@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<NewProject name="NewProject" type="Luna Video Mapping project">
+  <Screens>
+    <Screen id="0"/>
+  </Screens>
+  <Scenes>
+    <Scene>
+      <MediaItem Screen="0" height="1920" id="0" isGenerator="0" name="emptyRoad.jpg" width="1280">
+        <xyN>
+          <point index="0" x="0.0" y="1.0"/>
+          <point index="1" x="1.0" y="1.0"/>
+          <point index="2" x="1.0" y="0.0"/>
+          <point index="3" x="0.0" y="0.0"/>
+        </xyN>
+        <uvN>
+          <point index="0" x="0.106249966" y="0.82045454"/>
+          <point index="1" x="0.7684659" y="0.93863636"/>
+          <point index="2" x="0.7646306" y="0.22499985"/>
+          <point index="3" x="0.15610792" y="0.24772727"/>
+        </uvN>
+      </MediaItem>
+    </Scene>
+    <Scene>
+      <MediaItem Screen="0" height="811" id="0" isGenerator="0" name="painting1.jpg" width="640">
+        <xyN>
+          <point index="0" x="0.0" y="1.0"/>
+          <point index="1" x="1.0" y="1.0"/>
+          <point index="2" x="1.0" y="0.0"/>
+          <point index="3" x="0.0" y="0.0"/>
+        </xyN>
+        <uvN>
+          <point index="0" x="0.60994315" y="0.8227272"/>
+          <point index="1" x="0.8860795" y="0.8749999"/>
+          <point index="2" x="0.9397727" y="0.28181803"/>
+          <point index="3" x="0.5319602" y="0.33863652"/>
+        </uvN>
+      </MediaItem>
+      <MediaItem Screen="0" height="360" id="1" isGenerator="0" name="legsDance_640_360_25fps.mp4" width="640">
+        <xyN>
+          <point index="0" x="0.0" y="1.0"/>
+          <point index="1" x="1.0" y="1.0"/>
+          <point index="2" x="1.0" y="0.0"/>
+          <point index="3" x="0.0" y="0.0"/>
+        </xyN>
+        <uvN>
+          <point index="0" x="0.058948826" y="0.8454546"/>
+          <point index="1" x="0.4169034" y="0.8409091"/>
+          <point index="2" x="0.38622156" y="0.33181816"/>
+          <point index="3" x="0.10752837" y="0.3090909"/>
+        </uvN>
+      </MediaItem>
+    </Scene>
+  </Scenes>
+</NewProject>

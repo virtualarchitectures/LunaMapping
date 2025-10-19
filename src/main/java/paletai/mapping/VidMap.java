@@ -4,22 +4,20 @@ import processing.core.*;
 import processing.opengl.*;
 
 /**
- * A class for managing video mapping transformations with interactive
- * calibration. Handles homography calculations, shader applications, and
- * provides UI for point adjustment.
- * 
- * <p>
- * This class combines {@link MathHomography} calculations with Processing's
+ * Handles homography transformations for video mapping with interactive calibration.
+ * Provides UI for point adjustment and real-time perspective correction.
+ *
+ * <p>This class combines {@link MathHomography} calculations with Processing's
  * OpenGL rendering pipeline to create perspective-corrected video mappings. It
- * supports:
- * </p>
+ * supports:</p>
  * <ul>
  * <li>Interactive calibration with draggable control points</li>
  * <li>Real-time homography updates</li>
  * <li>Serialization of mapping configurations</li>
  * <li>Visual feedback during calibration</li>
+ * <li>Preview area integration for UI display</li>
  * </ul>
- * 
+ *
  * @author Daniel Corbani
  * @version 1.0
  * @see MathHomography
@@ -29,44 +27,59 @@ import processing.opengl.*;
 public class VidMap {
 	/** The parent Processing applet */
 	PApplet p;
+
 	/** Shader for applying homography transformations */
 	PShader mapInOut;
+
+    /** Display resolution for this mapping */
 	int resolutionX, resolutionY;
+
 	/** Graphics buffers for input and output */
 	PGraphics2D pgCanvas, pgInput;
+
 	/** Normalized coordinates for shader (0-1 range) */
 	public PVector[] xyN = new PVector[4]; // Normalized coordinates for Shader
 	public PVector[] uvN = new PVector[4]; // Normalized coordinates for Shader
-	/** Pixel coordinates for Processing display */
+
+    /** Pixel coordinates for Processing display */
 	public PVector[] xyP = new PVector[4]; // Pixel coordinates for Processing (for drawing)
 	public PVector[] uvP = new PVector[4]; // Pixel coordinates for Processing (for drawing)
-	/** Math utility for homography calculations */
+
+    /** Math utility for homography calculations */
 	MathHomography mat;
-	/** 3D matrix for shader transformations */
+
+    /** 3D matrix for shader transformations */
 	PMatrix3D H;
-	/** Calibration state flags */
+
+    /** Calibration state flags */
 	boolean calibrate = false;
 	public boolean checkInput = false;
-	/** Point interaction tracking */
+
+    /** Point interaction tracking */
 	int hoverPoint = -1; // Point index to highlight when hovering
 	int selectedPoint = -1; // New variable to store the selected point for live adjustment
 
 	/** Unique identifier for this mapping */
 	String objectName; // Unique name for the VidMap object
-	/** Image dragging state */
+
+    /** Image dragging state */
 	private boolean movingImage = false;
 	private PVector initialMousePos;
 	private PVector[] initialCorners;
-	/** Preview area parameters */
+
+    /** Preview area parameters */
 	private float previewX, previewY, previewWidth, previewHeight;
 	private boolean hasPreview = false;
 
-	/**
-	 * Constructs a new VidMap instance.
-	 *
-	 * @param p    The parent Processing applet
-	 * @param name Unique identifier for this mapping
-	 */
+    /**
+     * Constructs a new VidMap instance.
+     * Initializes the homography shader, display buffers, and mathematical utilities.
+     *
+     * @param p The parent Processing applet
+     * @param name Unique identifier for this mapping
+     * @see #assignToDisplay(int, int)
+     * @see #resetHomography()
+     */
 	public VidMap(PApplet p, String name) {
 		//PApplet.println("Initializing VidMap");
 		this.p = p;
@@ -79,6 +92,15 @@ public class VidMap {
 		// println("Finishing VidMap");
 	}
 
+    /**
+     * Assigns this VidMap to a display with specific dimensions.
+     * Creates graphics buffers and configures the shader for the target resolution.
+     *
+     * @param w The width of the target display
+     * @param h The height of the target display
+     * @see PGraphics2D
+     * @see PShader#set(String, float, float)
+     */
 	public void assignToDisplay(int w, int h) {
 
 		this.resolutionX = w;
@@ -88,7 +110,15 @@ public class VidMap {
 		mapInOut.set("resolution", resolutionX, resolutionY);
 	}
 
-
+    /**
+     * Sets the preview area for calibration point display.
+     * Defines the screen region where calibration points and grids will be rendered.
+     *
+     * @param px Preview area x-coordinate
+     * @param py Preview area y-coordinate
+     * @param pw Preview area width
+     * @param ph Preview area height
+     */
 	public void setPreviewArea(float px, float py, float pw, float ph) {
 		this.previewX = px;
 		this.previewY = py;
@@ -97,14 +127,25 @@ public class VidMap {
 		this.hasPreview = true;
 	}
 
+    /**
+     * Assigns this VidMap to a display using an existing PGraphics buffer.
+     * Uses the dimensions of the provided graphics buffer for configuration.
+     *
+     * @param pgScreen The PGraphics2D buffer to use for display assignment
+     * @see #assignToDisplay(int, int)
+     */
 	void assignToDisplay(PGraphics2D pgScreen) {
 		assignToDisplay(pgScreen.width, pgScreen.height);
 	}
 
-	/**
-	 * Resets the homography to identity transformation. Initializes all points to
-	 * the corners of the display.
-	 */
+    /**
+     * Resets the homography to identity transformation.
+     * Initializes all points to the corners of the display and updates
+     * the homography matrix accordingly.
+     *
+     * @see #updateHomography(PVector[], PVector[])
+     * @see #Pixel2Nornal(PVector)
+     */
 	public void resetHomography() {
 		//PApplet.println("resetHomography");
 		// Initialize Processing points in pixel coordinates
@@ -128,13 +169,17 @@ public class VidMap {
 		updateHomography(xyN, uvN);
 	}
 
-	/**
-	 * Updates the homography matrix from pixel-space coordinates.
-	 *
-	 * @param xyPP Source points in pixel coordinates
-	 * @param uvPP Destination points in pixel coordinates
-	 * @throws IllegalArgumentException If arrays don't contain exactly 4 points
-	 */
+    /**
+     * Updates the homography matrix from pixel-space coordinates.
+     * Converts pixel coordinates to normalized coordinates and updates
+     * the transformation accordingly.
+     *
+     * @param xyPP Source points in pixel coordinates
+     * @param uvPP Destination points in pixel coordinates
+     * @throws IllegalArgumentException If arrays don't contain exactly 4 points
+     * @see #Pixel2Nornal(PVector)
+     * @see #updateHomography(PVector[], PVector[])
+     */
 	public void updateHomographyFromPixel(PVector[] xyPP, PVector[] uvPP) {
 		for (int i = 0; i < 4; i++) {
 			xyP[i] = xyPP[i];
@@ -146,12 +191,18 @@ public class VidMap {
 		updateHomography(xyN, uvN);
 	}
 
-	/**
-	 * Updates the homography transformation from normalized coordinates.
-	 *
-	 * @param xyNew Source points in normalized coordinates (0-1)
-	 * @param uvNew Destination points in normalized coordinates (0-1)
-	 */
+    /**
+     * Updates the homography transformation from normalized coordinates.
+     * Calculates the homography matrix and its inverse, then configures
+     * the shader with the transformed coordinates.
+     *
+     * @param xyNew Source points in normalized coordinates (0-1)
+     * @param uvNew Destination points in normalized coordinates (0-1)
+     * @see MathHomography#calculateHomography(PVector[], PVector[])
+     * @see MathHomography#invertMatrix(float[][])
+     * @see MathHomography#transpose(float[][])
+     * @see PShader#set(String, float, float)
+     */
 	public void updateHomography(PVector[] xyNew, PVector[] uvNew) {
 		for (int i = 0; i < 4; i++) {
 			xyP[i] = Normal2Pixel(xyNew[i]);
@@ -170,17 +221,28 @@ public class VidMap {
 		mapInOut.set("H", H, true); // true = use3x3
 	}
 
+    /**
+     * Toggles input checking mode for calibration.
+     * Switches between input (source) and output (destination) point manipulation.
+     */
 	public void toggleInput() {
 		checkInput = !checkInput;
 		// System.out.println("checkInput = " + vidMap.checkInput);
 	}
 
+    /**
+     * Draws a calibration grid on the specified corners.
+     * Creates a grid visualization to help with homography point alignment.
+     *
+     * @param corners The four corner points defining the grid area
+     * @param isInput Whether this is an input (source) grid (affects color)
+     */
 	private void makeGrid(PVector[] corners, boolean isInput) {
 		int gridSize = 10; // Number of cells in the grid
 		pgCanvas.stroke(0, 255, 0);
 		if (isInput)
 			pgCanvas.stroke(0, 0, 255);
-		pgCanvas.strokeWeight(1);
+		pgCanvas.strokeWeight(3);
 		pgCanvas.noFill();
 
 		// Interpolating horizontal and vertical grid lines
@@ -199,6 +261,16 @@ public class VidMap {
 		}
 	}
 
+    /**
+     * Renders the input image with homography transformation applied.
+     * Processes the input through the homography shader and draws calibration
+     * visuals if calibration mode is active.
+     *
+     * @param input The input graphics to transform
+     * @see #makeGrid(PVector[], boolean)
+     * @see #drawCalibrationOnPreview()
+     * @see PGraphics#filter(PShader)
+     */
 	public void render(PGraphics2D input) {
 		if (pgCanvas == null) {
 			// System.out.println("Initializing pgCanvas late...");
@@ -221,6 +293,13 @@ public class VidMap {
 		}
 	}
 
+    /**
+     * Draws calibration points and shapes on the preview area.
+     * Visualizes the current homography points in the UI preview with
+     * different colors for input and output points.
+     *
+     * @see #normalizedToPreview(PVector)
+     */
 	private void drawCalibrationOnPreview() {
 		if (!checkInput) {
 			// Draw output calibration (uvN points) on preview
@@ -257,23 +336,50 @@ public class VidMap {
 		}
 	}
 
+    /**
+     * Converts normalized coordinates to preview screen coordinates.
+     *
+     * @param normalized Normalized coordinates (0-1 range)
+     * @return Preview coordinates in screen space
+     */
 	private PVector normalizedToPreview(PVector normalized) {
 		float x = previewX + normalized.x * previewWidth;
 		float y = previewY + (1 - normalized.y) * previewHeight; // Invert Y for preview
 		return new PVector(x, y);
 	}
 
+    /**
+     * Converts preview screen coordinates to normalized coordinates.
+     *
+     * @param previewPoint Preview coordinates in screen space
+     * @return Normalized coordinates (0-1 range)
+     */
 	private PVector previewToNormalized(PVector previewPoint) {
 		float x = (previewPoint.x - previewX) / previewWidth;
 		float y = 1 - ((previewPoint.y - previewY) / previewHeight); // Invert Y conversion
 		return new PVector(x, y);
 	}
 
+    /**
+     * Converts preview screen coordinates to pixel coordinates.
+     *
+     * @param previewPoint Preview coordinates in screen space
+     * @return Pixel coordinates in display space
+     * @see #previewToNormalized(PVector)
+     * @see #Normal2Pixel(PVector)
+     */
 	private PVector previewToPixel(PVector previewPoint) {
 		PVector normalized = previewToNormalized(previewPoint);
 		return Normal2Pixel(normalized);
 	}
 
+    /**
+     * Renders a PImage with homography transformation applied.
+     * Wrapper method that converts PImage to PGraphics2D before processing.
+     *
+     * @param input The input image to transform
+     * @see #render(PGraphics2D)
+     */
 	public void render(PImage input) {
 		pgInput.beginDraw();
 		pgInput.image(input, 0, 0, pgCanvas.width, pgCanvas.height);
@@ -282,51 +388,74 @@ public class VidMap {
 		render(pgInput);
 	}
 
+    /**
+     * Returns the transformed media canvas after homography processing.
+     *
+     * @return PGraphics2D containing the transformed output
+     */
 	public PGraphics2D getMediaCanvas() {
 		return pgCanvas;
 	}
 
-	/**
-	 * Converts pixel coordinates to normalized shader coordinates.
-	 *
-	 * @param in Input point in pixel coordinates
-	 * @return Point in normalized coordinates (0-1, Y inverted)
-	 */
+    /**
+     * Converts pixel coordinates to normalized shader coordinates.
+     * Normalizes coordinates to 0-1 range and inverts Y-axis for shader compatibility.
+     *
+     * @param in Input point in pixel coordinates
+     * @return Point in normalized coordinates (0-1, Y inverted)
+     */
 	public PVector Pixel2Nornal(PVector in) {
 		return new PVector(in.x / pgCanvas.width, 1.0f - (in.y / pgCanvas.height)); // Normalize and invert Y-axis for
 																					// shader
 	}
 
-	/**
-	 * Converts normalized coordinates back to pixel space.
-	 *
-	 * @param in Input point in normalized coordinates
-	 * @return Point in pixel coordinates
-	 */
+    /**
+     * Converts normalized coordinates back to pixel space.
+     * Denormalizes coordinates and inverts Y-axis back to Processing coordinate system.
+     *
+     * @param in Input point in normalized coordinates
+     * @return Point in pixel coordinates
+     */
 	public PVector Normal2Pixel(PVector in) {
 		return new PVector(in.x * pgCanvas.width, (1.0f - in.y) * pgCanvas.height); // Convert back to Processing
 																					// coordinates
 	}
 
-	/**
-	 * Toggles calibration mode on/off.
-	 */
+    /**
+     * Toggles calibration mode on/off.
+     * Enables or disables the interactive calibration interface.
+     */
 	public void toggleCalibration() {
 		calibrate = !calibrate;
 		// System.out.println("calibrate " + objectName + "= " + calibrate);
 	}
 
+    /**
+     * Turns off calibration mode.
+     * Disables the interactive calibration interface.
+     */
 	public void offCalibration() {
 		calibrate = false;
 		// System.out.println("calibrate " + objectName + "= " + calibrate);
 	}
 
+    /**
+     * Turns on calibration mode.
+     * Enables the interactive calibration interface.
+     */
 	public void onCalibration() {
 		calibrate = true;
 		// System.out.println("calibrate " + objectName + "= " + calibrate);
 	}
 
-	// Helper method to check if mouse is inside the quadrilateral formed by uvP[]
+    /**
+     * Checks if mouse position is inside the quadrilateral formed by the given corners.
+     * Uses bounding box approximation for quick containment check.
+     *
+     * @param mouse The mouse position to check
+     * @param cc The four corner points defining the quadrilateral
+     * @return true if mouse is within the bounding box of the corners
+     */
 	private boolean isMouseInsideImage(PVector mouse, PVector[] cc) {
 		float minX = Math.min(Math.min(cc[0].x, cc[1].x), Math.min(cc[2].x, cc[3].x));
 		float maxX = Math.max(Math.max(cc[0].x, cc[1].x), Math.max(cc[2].x, cc[3].x));
@@ -336,6 +465,16 @@ public class VidMap {
 		return mouse.x > minX && mouse.x < maxX && mouse.y > minY && mouse.y < maxY;
 	}
 
+    /**
+     * Checks hover state for calibration points and image dragging.
+     * Determines if mouse is hovering over calibration points or inside the
+     * transformable image area in the preview.
+     *
+     * @param mousex The current x-coordinate of the mouse
+     * @param mousey The current y-coordinate of the mouse
+     * @see #normalizedToPreview(PVector)
+     * @see #isMouseInsideImage(PVector, PVector[])
+     */
 	public void checkHover(float mousex, float mousey) {
 		PVector mouse = new PVector(mousex, mousey);
 		hoverPoint = -1;
@@ -396,6 +535,17 @@ public class VidMap {
 		}
 	}
 
+    /**
+     * Moves hover points or drags the entire image during calibration.
+     * Updates homography points based on mouse movement in preview space.
+     * Supports individual point movement and whole-image translation.
+     *
+     * @param x The current x-coordinate of the mouse
+     * @param y The current y-coordinate of the mouse
+     * @see #previewToPixel(PVector)
+     * @see #Pixel2Nornal(PVector)
+     * @see #updateHomography(PVector[], PVector[])
+     */
 	public void moveHoverPoint(float x, float y) {
 		if (calibrate && hasPreview) {
 			PVector mouse = new PVector(x, y);
@@ -440,6 +590,10 @@ public class VidMap {
 		}
 	}
 
+    /**
+     * Handles mouse release events for calibration interaction.
+     * Completes dragging operations and resets movement states.
+     */
 	public void mouseReleased() {
 		movingImage = false;
 	}

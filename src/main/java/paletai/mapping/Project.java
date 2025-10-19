@@ -17,76 +17,128 @@ import java.util.Objects;
 /**
  * The main container class that manages multiple scenes and transitions.
  * Handles the overall project structure, scene navigation, and rendering
- * pipeline.
- * 
- * <p>
- * Key features include:
- * </p>
+ * pipeline for the Luna Video Mapping system.
+ *
+ * <p>Key features include:</p>
  * <ul>
  * <li>Scene management and organization</li>
+ * <li>Screen configuration and display management</li>
+ * <li>Media file discovery and management</li>
+ * <li>Content generator discovery and integration</li>
+ * <li>Project serialization to/from XML</li>
  * <li>Scene transitions with fade effects</li>
- * <li>Project serialization (future implementation)</li>
  * <li>Global project state management</li>
  * </ul>
- * 
+ *
  * @author Daniel Corbani
  * @version 1.0
  * @see Scene
+ * @see Screen
+ * @see MediaItem
+ * @see LunaContentGenerator
  */
 public class Project {
-	PApplet mainApplet; // needed for control P5
-	String projectName; // Name passed by the user
-	ArrayList<Scene> scenes = new ArrayList<Scene>();
-	int currentScene = 0;
-	ArrayList<Screen> screens = new ArrayList<Screen>(); // Screens containing Scenes / external displays only, UI not
-															// included here
-	int currentScreen = 0;
-	ArrayList<Rectangle> availableDisplays = new ArrayList<Rectangle>(); // Stores external displays config
-	XML config;
-	PGraphics2D canvaUI; // Main PGraphics for UI
+    /** The main PApplet instance */
+    PApplet mainApplet; // needed for control P5
 
-	int mainWidth, mainHeight; // Used for UI drawings
-	int hx1, hx2, hy1, hy2, r; // handles for separating panels
-	ArrayList<String> mediaFiles = new ArrayList<String>();
+    /** Name of the project as specified by the user */
+    String projectName;
 
-	ControlP5 cp5;
-	Group mediaList, screenList, displaysList, sceneList, generatorList;
-	RadioButton screenRadio, sceneRadio;
-	int screenButtonsArea = 30;
-	boolean addSelectScreenBool = false, removeScreenBol; // to avoid creating a button inside another button
-	boolean addSceneBool = false, removeSceneBol = false;
+    /** List of all scenes in the project */
+    ArrayList<Scene> scenes = new ArrayList<Scene>();
 
-	// Preview are for Screen Panel
-	float previewAreaX, previewAreaY, previewAreaWidth, previewAreaHeight, previewWidth, previewHeight, previewX,
-			previewY;
+    /** Index of the currently active scene */
+    int currentScene = 0;
 
-	private int nextScene = -1;
-	private boolean isTransitioning = false;
-	private int transitionStartTime;
-	private int transitionDuration = 2000; // 2 second transition
-	private float transitionProgress = 0;
+    /** List of all configured screens/displays */
+    ArrayList<Screen> screens = new ArrayList<Screen>();
 
-	Camera cam;
+    /** Index of the currently selected screen */
+    int currentScreen = 0;
 
-	private ArrayList<LunaContentGenerator> availableGenerators;
+    /** Stores available external display configurations */
+    ArrayList<Rectangle> availableDisplays = new ArrayList<Rectangle>();
 
+    /** XML configuration for project serialization */
+    XML config;
+
+    /** Main PGraphics buffer for UI rendering */
+    PGraphics2D canvaUI;
+
+    /** Main display dimensions used for UI layout */
+    int mainWidth, mainHeight;
+
+    /** Handle positions and radius for panel separation */
+    int hx1, hx2, hy1, hy2, r;
+
+    /** List of discovered media files in the data directory */
+    ArrayList<String> mediaFiles = new ArrayList<String>();
+
+    /** ControlP5 instance for UI controls */
+    ControlP5 cp5;
+
+    /** UI control groups for organization */
+    Group mediaList, screenList, displaysList, sceneList, generatorList;
+
+    /** Radio buttons for screen and scene selection */
+    RadioButton screenRadio, sceneRadio;
+
+    /** Area reserved for screen buttons */
+    int screenButtonsArea = 30;
+
+    /** Flags for UI state management */
+    boolean addSelectScreenBool = false, removeScreenBol;
+    boolean addSceneBool = false, removeSceneBol = false;
+
+    /** Preview area dimensions for screen panel */
+    float previewAreaX, previewAreaY, previewAreaWidth, previewAreaHeight, previewWidth, previewHeight, previewX, previewY;
+
+    /** Scene transition management */
+    private int nextScene = -1;
+    private boolean isTransitioning = false;
+    private int transitionStartTime;
+    private int transitionDuration = 2000; // 2 second transition
+    private float transitionProgress = 0;
+
+    /** Available content generators discovered through reflection */
+    private ArrayList<LunaContentGenerator> availableGenerators;
+
+    /**
+     * Constructs a new Project instance with the specified name.
+     * Initializes displays, scans for media files and generators, loads configuration,
+     * and sets up the user interface.
+     *
+     * @param p The parent PApplet instance (typically 'this' from the sketch)
+     * @param name The name of the project. If null or empty, defaults to "untitled"
+     * @see #initializeDisplays()
+     * @see #scanMediaFiles()
+     * @see #scanGenerators()
+     * @see #initXMLconfig()
+     * @see #initializeButtons()
+     */
 	public Project(PApplet p, String name) {
 		mainApplet = p;
 		projectName = (name == null || name.trim().isEmpty()) ? "untitled" : name.trim();
 		cp5 = new ControlP5(mainApplet); // must be called before creating buttons;
 		initializeDisplays();
-		//cam = new Camera(mainApplet);
 		mainApplet.image(canvaUI, 0, 0);
 		scanMediaFiles();
         scanGenerators();
 		initXMLconfig();
 		initializeButtons();
-		// PApplet.println("Finished Setup");
 	}
 
-	/////// External Displays Management
+    /**
+     * Initializes available displays and sets up the main UI canvas.
+     *
+     * <p>This method detects all connected displays, configures the main display for UI,
+     * and stores information about external displays for potential screen configuration.
+     * The main UI canvas is initialized with default dimensions and background.</p>
+     *
+     * @see GraphicsEnvironment
+     * @see GraphicsDevice
+     */
 	void initializeDisplays() {
-		// PApplet.println("Initializing Displays...");
 		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		GraphicsDevice[] devices = ge.getScreenDevices();
 		availableDisplays.clear(); // Clear previous display info
@@ -94,7 +146,6 @@ public class Project {
 		for (int i = 0; i < devices.length; i++) {
 			Rectangle bounds = devices[i].getDefaultConfiguration().getBounds();
 			if (i == 0) { // initialize UI
-				// PApplet.println("Main display");
 				mainWidth = bounds.width;
 				mainHeight = bounds.height;
 				hx1 = mainWidth / 6;
@@ -113,7 +164,7 @@ public class Project {
 				canvaUI.textSize(20);
 				canvaUI.fill(200);
 				canvaUI.textAlign(PConstants.CENTER, PConstants.CENTER);
-				canvaUI.text("Luna Video Mapping", canvaUI.width / 2, canvaUI.height / 2);
+				canvaUI.text("Luna Video Mapping", (float) canvaUI.width / 2, (float) canvaUI.height / 2);
 				canvaUI.endDraw();
 			} else {
 				// Store external display info without creating screens
@@ -123,23 +174,33 @@ public class Project {
 		}
 	}
 
-	/////// Check Data Folder for readable media files
+    /**
+     * Scans the data directory for supported media files.
+     *
+     * <p>This method searches the sketch's data folder for files with supported
+     * media extensions and adds them to the mediaFiles list for later use.</p>
+     *
+     * @see #isMediaFile(String)
+     * @see PApplet#sketchPath(String)
+     */
 	void scanMediaFiles() {
-		// PApplet.println("Scan media files");
 		File dataDir = new File(mainApplet.sketchPath("data"));
 		if (dataDir.exists() && dataDir.isDirectory()) {
 			File[] files = dataDir.listFiles();
-			// PApplet.println("data folder contain: " + files.length + " files");
 			for (File file : files) {
 				if (isMediaFile(file.getName())) {
 					mediaFiles.add(file.getName());
-					// PApplet.println(file.getName() + " added to mediaFiles");
 				}
 			}
 		}
 	}
 
-	// Helper method to check file extensions
+    /**
+     * Checks if a filename has a supported media extension.
+     *
+     * @param filename The name of the file to check
+     * @return true if the file has a supported media extension (.mp4, .mov, .png, .jpg, .jpeg, .gif)
+     */
 	boolean isMediaFile(String filename) {
 		String[] supportedExtensions = { ".mp4", ".mov", ".png", ".jpg", ".jpeg", ".gif" };
 		String lowerName = filename.toLowerCase();
@@ -151,28 +212,32 @@ public class Project {
 		return false;
 	}
 
+    /**
+     * Discovers available content generators through reflection.
+     *
+     * <p>This method scans the main applet's inner classes for implementations of
+     * LunaContentGenerator that are not abstract or interfaces, and instantiates
+     * them for use in the project.</p>
+     *
+     * @see LunaContentGenerator
+     * @see Modifier
+     * @see Constructor
+     */
     private void scanGenerators() {
         availableGenerators = new ArrayList<LunaContentGenerator>();
         PApplet.println("=== Luna Generator Discovery ===");
 
         try {
             Class<?>[] declaredClasses = mainApplet.getClass().getDeclaredClasses();
-            PApplet.println("Scanning " + declaredClasses.length + " declared classes...");
-
             for (Class<?> clazz : declaredClasses) {
-                //PApplet.println("Checking: " + clazz.getSimpleName());
-
                 if (LunaContentGenerator.class.isAssignableFrom(clazz) &&
                         !clazz.isInterface() &&
                         !Modifier.isAbstract(clazz.getModifiers())) {
-                    //PApplet.println("Checking first if");
                     try {
-                        // Try with PApplet reference for inner classes
                         java.lang.reflect.Constructor<?> constructor = clazz.getDeclaredConstructor(mainApplet.getClass());
                         constructor.setAccessible(true); // This is the key!
                         LunaContentGenerator generator = (LunaContentGenerator) constructor.newInstance(mainApplet);
                         availableGenerators.add(generator);
-                        //PApplet.println("✓ Generator: '" + generator.getName() + "'");
 
                     } catch (Exception e) {
                         PApplet.println("! Instantiation failed: " + e.getMessage());
@@ -189,12 +254,28 @@ public class Project {
         PApplet.println("=== Discovery Complete ===\n");
     }
 
+    /**
+     * Returns the list of discovered content generators.
+     *
+     * @return ArrayList of available LunaContentGenerator instances
+     * @see LunaContentGenerator
+     */
     public ArrayList<LunaContentGenerator> getGenerators(){
         return availableGenerators;
     }
-    /////// Initilize from XML file
+
+    /**
+     * Initializes project configuration from XML file.
+     *
+     * <p>Attempts to load an existing project configuration from the data directory.
+     * If no existing configuration is found, creates a new project with default
+     * screen and scene.</p>
+     *
+     * @see #loadProjectFromXML(XML)
+     * @see #addNewScreen()
+     * @see #addNewScene()
+     */
 	void initXMLconfig() {
-		// PApplet.println("init XML config");
 		String filename = "data/" + projectName + ".xml";
 		File file = new File(mainApplet.sketchPath(filename));
 		if (file.exists()) {
@@ -215,15 +296,25 @@ public class Project {
 		}
 	}
 
+    /**
+     * Loads project data from XML configuration.
+     *
+     * <p>Reconstructs the project state including screens, scenes, and media items
+     * from the provided XML structure. Handles both traditional media files and
+     * generative content.</p>
+     *
+     * @param xml The XML element containing project configuration
+     * @see Screen
+     * @see Scene
+     * @see MediaItem
+     * @see GenerativeMediaItem
+     */
 	void loadProjectFromXML(XML xml) {
-		// PApplet.println("Entered loadProjectFromXML");
 		XML ScreensParent = xml.getChild("Screens");
 		XML[] Screens = ScreensParent.getChildren("Screen");
 		for (XML Screen : Screens) {
 			addNewScreen();
-			// PApplet.println("added Screen");
 		}
-		// PApplet.println("Done Screens");
 		addSelectScreenBool = false;
 		XML ScenesParent = xml.getChild("Scenes");
 		XML[] Scenes = ScenesParent.getChildren("Scene");
@@ -234,15 +325,11 @@ public class Project {
 			for (XML Media : Medias) {
                 int isGen = Media.getInt("isGenerator");
                 if (isGen >0) {
-                    PApplet.println("Found generator saved");
                     int newMediaId = newScene.mediaItems.size();
-                    //PApplet.println("Add generator?" + newMediaId);
                     String MediaGeneratorName = Media.getString("name");
                     PApplet.println(MediaGeneratorName);
                     for (LunaContentGenerator generator : availableGenerators){
-                        //PApplet.println(generator.getName());
                         if(Objects.equals(MediaGeneratorName, generator.getName())){
-                            //PApplet.println("Match name: " + MediaGeneratorName + "=" + generator.getName());
                             GenerativeMediaItem newMedia = new GenerativeMediaItem(mainApplet, generator, Media);
                             int screenId = Media.getInt("Screen");
                             newMedia.assignToDisplay(screens.get(screenId).w, screens.get(screenId).h, screenId);
@@ -259,9 +346,18 @@ public class Project {
 			scenes.add(newScene);
 		}
 		addSceneBool = false; // avoids duplicated button on initialization
-		// PApplet.println("Done Scenes");
 	}
 
+    /**
+     * Saves the current project state to an XML file.
+     *
+     * <p>Serializes all project data including screens, scenes, and media items
+     * to an XML file in the data directory. The file is named after the project.</p>
+     *
+     * @see Screen#saveXML()
+     * @see Scene#saveXML()
+     * @see PApplet#saveXML(XML, String)
+     */
 	void saveToFile() {
 //		PApplet.println("save to file");
 		config = new XML(projectName);
@@ -279,11 +375,14 @@ public class Project {
 			ScenesParent.addChild(scene.saveXML());
 		}
 		mainApplet.saveXML(config, "data/" + projectName + ".xml");
-		// PApplet.println("Project saved");
 	}
 
-	///// Screen management
-	// Create a new screen
+    /**
+     * Creates a new screen and adds it to the project.
+     * Sets the flag to update ControlP5 buttons on the next cycle.
+     *
+     * @see Screen
+     */
 	void addNewScreen() {
 		int newScreenId = screens.size();
 		Screen newScreen = new Screen(mainApplet, newScreenId);
@@ -291,7 +390,13 @@ public class Project {
 		addSelectScreenBool = true; // tell ControlP5 to update next time
 	}
 
-    // Delete current new scene
+    /**
+     * Deletes the currently selected screen from the project.
+     * Maintains at least one screen in the project. Updates the current screen
+     * index and selects the appropriate screen after deletion.
+     *
+     * @see #selectScreen(int)
+     */
     void DelCurScreen() {
         if (screens.size() > 1) {
             screens.remove(currentScreen);
@@ -309,7 +414,12 @@ public class Project {
 
     }
 
-	// Create a new scene
+    /**
+     * Creates a new scene and adds it to the project.
+     * Sets the flag to update ControlP5 buttons on the next cycle.
+     *
+     * @see Scene
+     */
 	void addNewScene() {
 		// int newSceneId = scenes.size();
 		// println("Adding a new Scene with index " + newId);
@@ -319,7 +429,14 @@ public class Project {
 		addSceneBool = true;
 	}
 
-	// Delete current new scene
+    /**
+     * Deletes the currently selected scene from the project.
+     * Maintains at least one scene in the project. Deactivates the scene before
+     * removal and updates the current scene index after deletion.
+     *
+     * @see Scene#deactivate()
+     * @see #selectScene(int)
+     */
 	void DelCurScene() {
 		if (scenes.size() > 1 && currentScene >= 0 && currentScene < scenes.size()) {
 			scenes.get(currentScene).deactivate();
@@ -338,17 +455,34 @@ public class Project {
 		selectScene(currentScene);
 	}
 
+    /**
+     * Adds a media file to the current scene.
+     * Creates a new MediaItem, assigns it to the current screen, and updates
+     * the thumbnail position in the scene.
+     *
+     * @param name The filename of the media to add
+     * @see MediaItem
+     * @see Scene#addMedia(MediaItem)
+     * @see MediaItem#assignToDisplay(int, int, int)
+     */
 	void addMedia(String name) {
-		// PApplet.println("Add media?");
 		int newMediaId = scenes.get(currentScene).mediaItems.size();
 		MediaItem newMedia = new MediaItem(mainApplet, name, currentScreen, newMediaId);
 		newMedia.assignToDisplay(screens.get(currentScreen).w, screens.get(currentScreen).h, currentScreen);
 		scenes.get(currentScene).addMedia(newMedia);
 		scenes.get(currentScreen).setThumbnailPosition(2 * r, hy2);
-		// saveToFile();
-		// PApplet.println(name + " added to current Scene");
 	}
 
+    /**
+     * Adds a generative content generator to the current scene.
+     * Creates a new GenerativeMediaItem using the provided generator, assigns it
+     * to the current screen, and updates the thumbnail position in the scene.
+     *
+     * @param newGenerator The content generator to add to the scene
+     * @see GenerativeMediaItem
+     * @see LunaContentGenerator
+     * @see Scene#addMedia(MediaItem)
+     */
     void addGenerator(LunaContentGenerator newGenerator) {
         int newMediaId = scenes.get(currentScene).mediaItems.size();
         //PApplet.println("Add generator?" + newMediaId);
@@ -359,7 +493,17 @@ public class Project {
         // saveToFile();
         // PApplet.println(name + " added to current Scene");
     }
-	// This functions updates all buttons
+
+    /**
+     * Updates ControlP5 UI elements based on project state changes.
+     * Handles adding new screens/scenes and removing existing ones by
+     * recreating the appropriate button groups.
+     *
+     * @see #addSelectScreenButton(int)
+     * @see #addSelectSceneButton(int)
+     * @see #createSceneButtons()
+     * @see #createScreenButtons()
+     */
 	void updateCP5() {
 		if (addSelectScreenBool) {
 			addSelectScreenButton(screens.size() - 1);
@@ -381,6 +525,17 @@ public class Project {
 
 	}
 
+    /**
+     * Initializes all ControlP5 UI components for the project.
+     * Creates display assignment buttons, screen controls, scene controls,
+     * media selection buttons, and generator buttons.
+     *
+     * @see #createAssignDisplayButtons()
+     * @see #createScreenButtons()
+     * @see #createSceneButtons()
+     * @see #createMediaButtons()
+     * @see #createGeneratorButtons()
+     */
 	void initializeButtons() {
 		// PApplet.println("Initializing buttons");
 		createAssignDisplayButtons();
@@ -390,6 +545,15 @@ public class Project {
         createGeneratorButtons();
 	}
 
+    /**
+     * Creates buttons for assigning screens to external displays.
+     * Generates one button per available external display with appropriate
+     * styling and callback functionality.
+     *
+     * @see #assignDisplay(Rectangle)
+     * @see ControlP5
+     * @see Bang
+     */
 	void createAssignDisplayButtons() {  
 	    int DisplayButtonX = hx2 - 10 * r;
 	    int DisplayButtonHeight = 30;
@@ -418,6 +582,7 @@ public class Project {
 	        btn.getCaptionLabel()
 	            .setText("Display " + i)
 	            .setFont(myFont)
+                    .toUpperCase(false)
 	            .align(ControlP5.CENTER, ControlP5.CENTER);
 	        btn.setColorBackground(mainApplet.color(60, 60, 60));
 		    btn.setColorForeground(mainApplet.color(90, 90, 90));
@@ -434,7 +599,16 @@ public class Project {
 	        });
 	    }
 	}
-	
+
+    /**
+     * Assigns or unassigns the current screen to/from a display.
+     * If the screen is not assigned, it will be assigned to the specified display.
+     * If already assigned, it will be unassigned. Ensures only one screen per display.
+     *
+     * @param b The display rectangle to assign to the current screen
+     * @see Screen#assignToDisplay(Rectangle)
+     * @see Screen#unassign()
+     */
 	void assignDisplay(Rectangle b) {
 		if (screens.get(currentScreen).isAssigned == false) {
 			for (Screen screen : screens) {
@@ -448,6 +622,17 @@ public class Project {
 		}
 	}
 
+    /**
+     * Creates the screen management UI controls.
+     * Includes add/delete screen buttons and radio button group for screen selection.
+     * Applies consistent styling and callback handlers to all screen controls.
+     *
+     * @see #addNewScreen()
+     * @see #DelCurScreen()
+     * @see #addSelectScreenButton(int)
+     * @see ControlP5
+     * @see RadioButton
+     */
 	void createScreenButtons() {
 		if (screenList != null) screenList.remove();
 		
@@ -467,6 +652,7 @@ public class Project {
 	        .setGroup(screenList);
 
 	    addBtn.getCaptionLabel()
+                .toUpperCase(false)
 	          .setFont(myFont)
 	          .align(ControlP5.CENTER, ControlP5.CENTER);
         addBtn.setColorBackground(mainApplet.color(60, 120, 60));
@@ -528,6 +714,16 @@ public class Project {
 		// PApplet.println("Create Screen buttons");
 	}
 
+    /**
+     * Adds a screen selection button to the radio button group.
+     * Creates a styled toggle button for the specified screen index with
+     * selection callback functionality.
+     *
+     * @param index The screen index to create a button for
+     * @see #selectScreen(int)
+     * @see Toggle
+     * @see RadioButton
+     */
 	void addSelectScreenButton(int index) {
 		// PApplet.println("Entered addSelectScreenButtons");
 		String optionName = "" + index;
@@ -540,6 +736,7 @@ public class Project {
 		screenRadio.getItem(optionName)
 			.getCaptionLabel()
 			.setFont(myFont)
+                .toUpperCase(false)
 			.align(ControlP5.CENTER, ControlP5.CENTER)
 			.setColor(mainApplet.color(255))
 			.setSize(14);
@@ -559,6 +756,11 @@ public class Project {
 		// PApplet.println("Add select Screen button");
 	}
 
+    /**
+     * Selects a screen by index and makes it the current active screen.
+     *
+     * @param index The index of the screen to select
+     */
 	void selectScreen(int index) {
 		if (index >= 0 && index < screens.size()) {
 			currentScreen = index;
@@ -566,6 +768,17 @@ public class Project {
 		}
 	}
 
+    /**
+     * Creates the scene management UI controls.
+     * Includes add/delete scene buttons and radio button group for scene selection.
+     * Applies consistent styling and callback handlers to all scene controls.
+     *
+     * @see #addNewScene()
+     * @see #DelCurScene()
+     * @see #addSelectSceneButton(int)
+     * @see ControlP5
+     * @see RadioButton
+     */
 	void createSceneButtons() {
 	    // remove previous group if it exists
 	    if (sceneList != null) sceneList.remove();
@@ -654,6 +867,16 @@ public class Project {
 	    }
 	}
 
+    /**
+     * Adds a scene selection button to the radio button group.
+     * Creates a styled toggle button for the specified scene index with
+     * selection callback functionality. Automatically activates the first scene.
+     *
+     * @param index The scene index to create a button for
+     * @see #selectScene(int)
+     * @see Toggle
+     * @see RadioButton
+     */
 	void addSelectSceneButton(int index) {
 	    String optionName = "Scene " + index;
 
@@ -691,6 +914,15 @@ public class Project {
 	    });
 	}
 
+    /**
+     * Selects a scene by index and activates it.
+     * Deactivates all other scenes and updates all screens to reference
+     * the newly selected scene.
+     *
+     * @param index The index of the scene to select
+     * @see Scene#activate()
+     * @see Scene#deactivate()
+     */
 	void selectScene(int index) {
 		if (index >= 0 && index < scenes.size()) {
 			currentScene = index;
@@ -707,6 +939,15 @@ public class Project {
 		}
 	}
 
+    /**
+     * Creates media file selection buttons.
+     * Generates one button for each discovered media file in the data directory
+     * with appropriate styling and callback to add media to the current scene.
+     *
+     * @see #addMedia(String)
+     * @see ControlP5
+     * @see Button
+     */
 	void createMediaButtons() {
 	    // Create the group container
 	    mediaList = cp5.addGroup("Media List")
@@ -733,7 +974,7 @@ public class Project {
 	            .setGroup(mediaList);                 // attach to group
 
 	        // ---- Styling ----
-	        b.getCaptionLabel().setFont(myFont);      // font
+	        b.getCaptionLabel().setFont(myFont).toUpperCase(false);      // font
 	        b.setColorBackground(mainApplet.color(91, 91, 91)); // normal background
 	        b.setColorForeground(mainApplet.color(202, 195, 226)); // hover color
 	        b.setColorActive(mainApplet.color(171, 128, 255));   // pressed color
@@ -750,6 +991,16 @@ public class Project {
 	    }
 	}
 
+    /**
+     * Creates content generator selection buttons.
+     * Generates one button for each discovered content generator with
+     * appropriate styling and callback to add the generator to the current scene.
+     *
+     * @see #addGenerator(LunaContentGenerator)
+     * @see LunaContentGenerator
+     * @see ControlP5
+     * @see Button
+     */
     void createGeneratorButtons() {
         // Create the group container
         generatorList = cp5.addGroup("Generator List")
@@ -757,7 +1008,7 @@ public class Project {
                 .setBackgroundHeight(hy2 - hy1 - 2 * r)
                 .disableCollapse();
 
-        generatorList.getCaptionLabel().setVisible(false);
+        generatorList.getCaptionLabel().setVisible(false).toUpperCase(false);
         generatorList.hideBar();
 
         // Load a custom font (adjust name/size to your liking)
@@ -777,7 +1028,7 @@ public class Project {
                     .setGroup(generatorList);                 // attach to group
 
             // ---- Styling ----
-            b.getCaptionLabel().setFont(myFont);      // font
+            b.getCaptionLabel().setFont(myFont).toUpperCase(false);      // font
             b.setColorBackground(mainApplet.color(91, 91, 91)); // normal background
             b.setColorForeground(mainApplet.color(202, 195, 226)); // hover color
             b.setColorActive(mainApplet.color(171, 128, 255));   // pressed color
@@ -795,6 +1046,18 @@ public class Project {
         }
     }
 
+    /**
+     * Main rendering method that draws the entire project interface.
+     * Handles both normal rendering and scene transitions, updates UI controls,
+     * and renders all screens with their associated media content.
+     *
+     * @param mousex The current x-coordinate of the mouse
+     * @param mousey The current y-coordinate of the mouse
+     * @see #drawUI()
+     * @see #updateCP5()
+     * @see Scene#render()
+     * @see Screen#render(int, int)
+     */
 	public void render(int mousex, int mousey) {
 		drawUI();
 		updateCP5();
@@ -831,6 +1094,15 @@ public class Project {
 		}
 	}
 
+    /**
+     * Draws the main user interface including all panels and preview areas.
+     * Renders the project title, FPS counter, media panel, stage preview,
+     * effects panel, and timeline. Updates the main display with the rendered UI.
+     *
+     * @see #drawPanel(int, int, int, int, PGraphics2D)
+     * @see #drawStagePanel(int)
+     * @see #drawTimelinePanel(int)
+     */
 	void drawUI() {
 		canvaUI.beginDraw();
 		canvaUI.background(33);
@@ -839,8 +1111,8 @@ public class Project {
 		canvaUI.textSize(20);
 		canvaUI.fill(200);
 		canvaUI.textAlign(PConstants.CENTER, PConstants.CENTER);
-		canvaUI.text(projectName, mainWidth / 2, hy1 / 2);
-		canvaUI.text("fps: " + (int) (mainApplet.frameRate), mainWidth / 3, hy1 / 2);
+		canvaUI.text(projectName, (float) mainWidth / 2, (float) hy1 / 2);
+		canvaUI.text("fps: " + (int) (mainApplet.frameRate), (float) mainWidth / 3, (float) hy1 / 2);
 
 		// media
 		drawPanel(0, hy1, hx1, hy2, canvaUI);
@@ -860,12 +1132,30 @@ public class Project {
 		mainApplet.image(canvaUI, 0, 0);
 	}
 
+    /**
+     * Draws a rounded rectangle panel with the specified dimensions.
+     * Used as a background for various UI sections throughout the interface.
+     *
+     * @param x1 Left coordinate of the panel
+     * @param y1 Top coordinate of the panel
+     * @param x2 Right coordinate of the panel
+     * @param y2 Bottom coordinate of the panel
+     * @param input The PGraphics2D context to draw on
+     */
 	void drawPanel(int x1, int y1, int x2, int y2, PGraphics2D input) {
 		input.noStroke();
 		input.fill(44);
 		input.rect(x1 + r, y1 + r, x2 - x1 - 2 * r, y2 - y1 - 2 * r, r);
 	}
 
+    /**
+     * Updates the preview area dimensions and position based on current screen size.
+     * Calculates the optimal scale to fit the screen content within the preview area
+     * while maintaining aspect ratio, and centers the preview within the available space.
+     *
+     * @see Screen#w
+     * @see Screen#h
+     */
 	void updatePreviewArea() {
 		// Calculate scale to fit
 		float scale = PApplet.min(previewAreaWidth / screens.get(currentScreen).w,
@@ -879,6 +1169,16 @@ public class Project {
 		previewY = previewAreaY + (previewAreaHeight - previewHeight) / 2;
 	}
 
+    /**
+     * Draws the stage preview panel showing the current screen content.
+     * Displays the screen output scaled to fit the preview area with a border,
+     * and shows the screen index number overlaid on the preview.
+     *
+     * @param index The index of the screen to display in the preview
+     * @see #updatePreviewArea()
+     * @see Screen#getScreen()
+     * @see Screen#setPreviewArea(float, float, float, float)
+     */
 	void drawStagePanel(int index) {
 		// 1. Draw panel background
 		drawPanel(hx1, hy1, hx2, hy2, canvaUI);
@@ -906,6 +1206,17 @@ public class Project {
 		canvaUI.text("Stage Preview", hx1 + 20, hy1 + 15);
 	}
 
+    /**
+     * Draws the timeline panel at the bottom of the interface.
+     * Displays thumbnails of all media items in the current scene,
+     * positioned according to the scene's thumbnail layout.
+     *
+     * @param index The current scene index (unused in current implementation)
+     * @see Scene#mediaItems
+     * @see MediaItem#thumbnail
+     * @see MediaItem#thumbnailGenerated
+     * @see Scene#setThumbnailPosition(int, int)
+     */
 	void drawTimelinePanel(int index) {
 		drawPanel(0, hy2, mainWidth, mainHeight, canvaUI);
 		// 4. Draw UI elements on top
@@ -918,12 +1229,30 @@ public class Project {
 		}
 	}
 
+    /**
+     * Updates hover point position for all screens based on mouse coordinates.
+     * Used for interactive elements that respond to mouse movement.
+     *
+     * @param mousex The current x-coordinate of the mouse
+     * @param mousey The current y-coordinate of the mouse
+     * @see Screen#moveHoverPoint(float, float)
+     */
 	public void moveHoverPoint(float mousex, float mousey) {
 		for (Screen screen : screens) {
 			screen.moveHoverPoint(mousex, mousey);
 		}
 	}
 
+    /**
+     * Handles keyboard input for project controls.
+     * Saves the project on any key release and triggers scene transitions
+     * when the spacebar is pressed.
+     *
+     * @param k The character of the key released
+     * @param kc The key code of the key released
+     * @see #saveToFile()
+     * @see #startTransition(int)
+     */
 	public void keyreleased(char k, int kc) {
 		saveToFile();
 		if (k == ' ' && !isTransitioning) {
@@ -936,6 +1265,15 @@ public class Project {
 		}
 	}
 
+    /**
+     * Initiates a transition to a target scene with fade effect.
+     * Activates both current and target scenes during the transition period
+     * and starts the transition timer.
+     *
+     * @param targetScene The index of the scene to transition to
+     * @see #completeTransition()
+     * @see Scene#activate()
+     */
 	private void startTransition(int targetScene) {
 		if (targetScene >= 0 && targetScene < scenes.size() && targetScene != currentScene) {
 			isTransitioning = true;
@@ -948,6 +1286,16 @@ public class Project {
 		}
 	}
 
+    /**
+     * Completes an ongoing scene transition.
+     * Deactivates the previous scene, updates the current scene index,
+     * and cleans up transition state. Updates the scene radio button selection.
+     *
+     * @see #startTransition(int)
+     * @see Scene#deactivate()
+     * @see RadioButton#activate(int)
+     * @see RadioButton#deactivate(int)
+     */
 	private void completeTransition() {
 		// Clean up transition state
 		scenes.get(currentScene).deactivate();

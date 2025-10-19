@@ -7,10 +7,24 @@ import processing.core.PMatrix3D;
  * A class for handling homography calculations and matrix operations.
  * Provides methods for calculating homography matrices between two planes,
  * matrix inversion, transposition, and conversion to Processing's PMatrix3D format.
- * 
+ *
+ * <p>This class implements the mathematical backbone for perspective transformations
+ * used in video mapping, including Gauss-Jordan elimination for matrix solving.</p>
+ *
+ * <p>Key features:</p>
+ * <ul>
+ * <li>Homography matrix calculation from point correspondences</li>
+ * <li>Matrix inversion and transposition operations</li>
+ * <li>Gauss-Jordan elimination for linear systems</li>
+ * <li>Conversion to Processing's PMatrix3D format</li>
+ * <li>Support for both normalized and raw coordinate systems</li>
+ * </ul>
+ *
  * @author Daniel Corbani
  * @version 1.0
  * @see <a href="https://en.wikipedia.org/wiki/Homography">Homography</a>
+ * @see PMatrix3D
+ * @see PVector
  */
 
 public class MathHomography {
@@ -18,11 +32,11 @@ public class MathHomography {
 	/**
      * The 3x3 homography matrix stored internally.
      */
-	
 	float[][] hh;
-	
-	/**
+
+    /**
      * Constructs a MathHomography object initialized with an identity matrix.
+     * The identity matrix represents no transformation when applied.
      */
 	public MathHomography() {
 		hh = new float[3][3];
@@ -30,16 +44,19 @@ public class MathHomography {
 			hh[i][i] = 1;
 		}
 	}
-	
-	/**
+
+    /**
      * Calculates the homography matrix between two sets of 4 points (xy to uv),
      * with coordinates normalized by width and height.
+     * Uses the direct linear transformation (DLT) algorithm to compute the
+     * perspective transformation between two planes.
      *
      * @param xy Array of 4 source points (PVector)
      * @param uv Array of 4 destination points (PVector)
      * @param w Width used for coordinate normalization
      * @param h Height used for coordinate normalization
      * @return 3x3 homography matrix as float[][]
+     * @see #GaussJordan(float[][])
      */
 	public float[][] calculateHomography(PVector[] xy, PVector[] uv, int w, int h) {
 		float x0 = xy[0].x / w;
@@ -98,14 +115,16 @@ public class MathHomography {
 
 		return hh;
 	}
-	
-	/**
+
+    /**
      * Calculates the homography matrix between two sets of 4 points (xy to uv)
      * using raw coordinates (not normalized).
+     * Uses the direct linear transformation (DLT) algorithm with raw pixel coordinates.
      *
      * @param xy Array of 4 source points (PVector)
      * @param uv Array of 4 destination points (PVector)
      * @return 3x3 homography matrix as float[][]
+     * @see #GaussJordan(float[][])
      */
 	public float[][] calculateHomography(PVector[] xy, PVector[] uv) {
 		float x0 = xy[0].x;
@@ -164,12 +183,18 @@ public class MathHomography {
 
 		return hh;
 	}
-	
-	/**
+
+    /**
      * Performs Gauss-Jordan elimination on a matrix.
+     * Transforms the input matrix into reduced row echelon form (RREF)
+     * through a series of row operations including pivoting and normalization.
      *
      * @param m Input matrix to be processed
      * @return The matrix in reduced row echelon form
+     * @see #findNextNonZeroLine(float[][], int)
+     * @see #normLine(float[][], int)
+     * @see #zeroNextLines(float[][], int)
+     * @see #zeroPreviousLines(float[][], int)
      */
 	public float[][] GaussJordan(float[][] m) {
 		float[][] out = copyMatrix(m);
@@ -184,9 +209,10 @@ public class MathHomography {
 
 		return out;
 	}
-	
-	/**
+
+    /**
      * Creates a deep copy of a matrix.
+     * Allocates new memory and copies all values from the source matrix.
      *
      * @param m Matrix to be copied
      * @return A new matrix with identical values
@@ -200,8 +226,15 @@ public class MathHomography {
 		}
 		return out;
 	}
-	
-	
+
+    /**
+     * Finds the next non-zero line for pivoting in Gauss-Jordan elimination.
+     * Searches downward from the current pivot position to find a suitable row.
+     *
+     * @param m The matrix being processed
+     * @param k The current pivot row index
+     * @return Matrix with rows swapped if necessary
+     */
 	private float[][] findNextNonZeroLine(float[][] m, int k) {
 		float num = m[k][k];
 		float[][] out = copyMatrix(m);
@@ -217,6 +250,15 @@ public class MathHomography {
 		return out;
 	}
 
+    /**
+     * Swaps two rows in a matrix.
+     * Exchanges the positions of two rows to facilitate pivoting.
+     *
+     * @param m The matrix to modify
+     * @param a First row index to swap
+     * @param b Second row index to swap
+     * @return Matrix with swapped rows
+     */
 	private float[][] swapLines(float[][] m, int a, int b) {
 		float[][] out = copyMatrix(m);
 		float[] pa = m[a];
@@ -226,6 +268,14 @@ public class MathHomography {
 		return out;
 	}
 
+    /**
+     * Normalizes a row by its pivot element.
+     * Divides all elements in the row by the pivot value to create a leading 1.
+     *
+     * @param m The matrix being processed
+     * @param k The row index to normalize
+     * @return Matrix with normalized row
+     */
 	private float[][] normLine(float[][] m, int k) {
 		float[][] out = copyMatrix(m);
 		float pivot = out[k][k];
@@ -235,6 +285,14 @@ public class MathHomography {
 		return out;
 	}
 
+    /**
+     * Zeros out elements below the pivot in Gauss-Jordan elimination.
+     * Uses row operations to create zeros in the current pivot column for all rows below.
+     *
+     * @param m The matrix being processed
+     * @param k The current pivot row index
+     * @return Matrix with zeros below the pivot
+     */
 	private float[][] zeroNextLines(float[][] m, int k) {
 		float[][] out = copyMatrix(m);
 		for (int i = k + 1; i < out.length; i++) {
@@ -248,6 +306,15 @@ public class MathHomography {
 		return out;
 	}
 
+    /**
+     * Zeros out elements above the pivot in Gauss-Jordan elimination.
+     * Uses row operations to create zeros in the current pivot column for all rows above.
+     * Completes the back-substitution phase of the algorithm.
+     *
+     * @param m The matrix being processed
+     * @param k The current pivot row index
+     * @return Matrix with zeros above the pivot
+     */
 	private float[][] zeroPreviousLines(float[][] m, int k) { // k = line
 		float[][] out = copyMatrix(m);
 		for (int i = k - 1; i >= 0; i--) { // starts at k-1, the line up
@@ -261,6 +328,17 @@ public class MathHomography {
 		return out;
 	}
 
+    /**
+     * Calculates the inverse of a matrix using Gauss-Jordan elimination.
+     * Appends an identity matrix to the input, performs elimination,
+     * and extracts the inverse from the resulting matrix.
+     *
+     * @param m The matrix to invert (must be square)
+     * @return The inverse matrix
+     * @see #GaussJordan(float[][])
+     * @see #appendMatrix(float[][], float[][])
+     * @see #disappendMatrix(float[][], int)
+     */
 	public float[][] invertMatrix(float[][] m) {
 		float[][] in = copyMatrix(m);
 		float[][] id = new float[in.length][in[0].length];
@@ -271,6 +349,13 @@ public class MathHomography {
 		return out;
 	}
 
+    /**
+     * Transposes a matrix by swapping rows and columns.
+     * Creates a new matrix where element [i][j] becomes element [j][i].
+     *
+     * @param in The matrix to transpose
+     * @return The transposed matrix
+     */
 	public float[][] transpose(float[][] in) {
 		float[][] out = new float[in[0].length][in.length];
 		for (int row = 0; row < in.length; row++) {
@@ -281,6 +366,14 @@ public class MathHomography {
 		return out;
 	}
 
+    /**
+     * Appends two matrices horizontally.
+     * Combines two matrices by placing them side by side.
+     *
+     * @param a Left matrix
+     * @param b Right matrix
+     * @return Combined matrix [A|B]
+     */
 	private float[][] appendMatrix(float[][] a, float[][] b) {
 		float[][] out = new float[a.length][a[0].length + b[0].length];
 		for (int row = 0; row < a.length; row++) {
@@ -294,6 +387,14 @@ public class MathHomography {
 		return out;
 	}
 
+    /**
+     * Extracts the right portion of an appended matrix.
+     * Separates a combined matrix back into its original components.
+     *
+     * @param a The appended matrix
+     * @param cols Number of columns in the original left matrix
+     * @return The right portion of the appended matrix
+     */
 	private float[][] disappendMatrix(float[][] a, int cols) {
 		float[][] out = new float[a.length][cols];
 		for (int row = 0; row < a.length; row++) {
@@ -303,12 +404,14 @@ public class MathHomography {
 		}
 		return out;
 	}
-	
-	/**
+
+    /**
      * Converts a 3x3 homography matrix to a Processing PMatrix3D.
+     * Embeds the 3x3 matrix into a 4x4 matrix suitable for OpenGL transformations.
      *
      * @param hinv The 3x3 homography matrix
      * @return PMatrix3D representation of the homography
+     * @see PMatrix3D#set(float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float)
      */
 	public PMatrix3D getMatrix(float[][] hinv) {
 		PMatrix3D H = new PMatrix3D();
@@ -328,14 +431,18 @@ public class MathHomography {
 		return H;
 
 	}
-	
-	/**
+
+    /**
      * Calculates and returns the inverse homography matrix as PMatrix3D.
-     * This is useful for OpenGL coordinate transformations.
+     * This is useful for OpenGL coordinate transformations where the inverse
+     * matrix is typically required for proper perspective correction.
      *
      * @param xy Array of 4 source points
      * @param uv Array of 4 destination points
      * @return PMatrix3D representing the inverse homography
+     * @see #calculateHomography(PVector[], PVector[])
+     * @see #invertMatrix(float[][])
+     * @see #transpose(float[][])
      */
 	public PMatrix3D getMatrixInOut(PVector[] xy, PVector[] uv) {
 		float[][] h = calculateHomography(xy, uv);

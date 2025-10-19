@@ -4,15 +4,25 @@ import processing.core.*;
 
 /**
  * A class for applying homography transformations to points.
- * Wraps the mathematical operations from {@link MathHomography} 
+ * Wraps the mathematical operations from {@link MathHomography}
  * with convenient point transformation methods.
- * 
+ *
  * <p>This class maintains both a homography matrix and its inverse,
- * allowing efficient forward and backward transformations.</p>
- * 
+ * allowing efficient forward and backward transformations between
+ * coordinate systems.</p>
+ *
+ * <p>Key features:</p>
+ * <ul>
+ * <li>Forward and inverse homography transformations</li>
+ * <li>Automatic inverse matrix calculation</li>
+ * <li>Matrix state management</li>
+ * <li>Integration with Processing's PVector system</li>
+ * </ul>
+ *
  * @author Daniel Corbani
  * @version 1.0
  * @see MathHomography
+ * @see PVector
  */
 public class Homography {
 
@@ -30,10 +40,13 @@ public class Homography {
      * The math utility class for matrix operations
      */
 	MathHomography mat;
-	
-	/**
+
+    /**
      * Constructs a Homography object initialized with identity matrices.
-     * Creates both the homography matrix and its inverse as identity matrices.
+     * Creates both the homography matrix and its inverse as identity matrices,
+     * resulting in no transformation when applied.
+     *
+     * @see MathHomography
      */
 	public Homography() {
 
@@ -49,24 +62,27 @@ public class Homography {
 		}
 
 	}
-	
-	/**
+
+    /**
      * Updates the homography matrix and automatically calculates its inverse.
-     * 
+     * Maintains both matrices for efficient forward and backward transformations.
+     *
      * @param h The new 3x3 homography matrix to use
+     * @see MathHomography#copyMatrix(float[][])
+     * @see MathHomography#invertMatrix(float[][])
      */
-	
 	public void updateHomographyMatrix(float[][] h) {
 		hh = mat.copyMatrix(h);
 		hhInv = mat.invertMatrix(h);
 	}
-	
-	/**
-     * Transforms a point using the inverse homography matrix.
-     * Applies the inverse perspective transformation: out = inv(H) * in.
-     * 
+
+    /**
+     * Transforms a point using the homography matrix (forward transformation).
+     * Applies the perspective transformation: out = H * in.
+     * Transforms from source coordinates to destination coordinates.
+     *
      * @param in The input point to transform
-     * @return The inverse-transformed point
+     * @return The transformed point in destination coordinates
      */
 	public PVector vectorTransform(PVector in) {
 		PVector out = new PVector(0, 0);
@@ -79,6 +95,15 @@ public class Homography {
 		return out;
 	}
 
+    /**
+     * Transforms a point using the inverse homography matrix (backward transformation).
+     * Applies the inverse perspective transformation: out = inv(H) * in.
+     * Transforms from destination coordinates back to source coordinates.
+     * This is useful for mapping points from the output space back to the original input space.
+     *
+     * @param in The input point to inverse-transform (in destination coordinates)
+     * @return The inverse-transformed point in source coordinates
+     */
 	public PVector vectorInvertTransform(PVector in) {
 		PVector out = new PVector(0, 0);
 

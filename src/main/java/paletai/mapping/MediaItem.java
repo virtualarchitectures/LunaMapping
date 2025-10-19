@@ -16,22 +16,23 @@ import controlP5.Group;
  * A class for managing media items (images/videos) with homography
  * transformation capabilities. Handles loading, playback, and rendering of
  * media files with perspective correction.
- * 
- * <p>
- * Key features include:
- * </p>
+ *
+ * <p>Key features include:</p>
  * <ul>
  * <li>Automatic aspect ratio correction</li>
  * <li>Video playback control</li>
  * <li>Thumbnail generation</li>
  * <li>Homography transformation via {@link VidMap}</li>
  * <li>Media file management</li>
+ * <li>Generative content support</li>
+ * <li>UI controls for calibration and playback</li>
  * </ul>
- * 
+ *
  * @author Daniel Corbani
  * @version 1.0
  * @see VidMap
  * @see Movie
+ * @see LunaContentGenerator
  */
 
 public class MediaItem {
@@ -46,49 +47,72 @@ public class MediaItem {
 	private PImage img;
 	/** Thumbnail representation */
 	public PImage thumbnail;
+
+    /** Thumbnail display position */
 	public float thumbnailX, thumbnailY;
+
 	/** Video flag */
 	private final boolean isVideo;
+
+    /** Media loading status */
 	private boolean loaded = false;
+
+    /** Video looping status */
 	private boolean isLooping = false;
+
 	/** Video object (for movies) */
 	private Movie movie;
+
 	/** Graphics buffer for rendering */
 	private PGraphics2D mediaCanvas;
+
 	/** Homography transformation handler */
 	public VidMap vm; // Homography transformation
+
 	/** Original media dimensions */
 	public int mediaWidth, mediaHeight;
+
+    /** Assigned screen index and media identifier */
 	public int assignedScreen, mediaId;
+
+    /** Display resolution for this media */
 	int resolutionX, resolutionY;
+
+    /** Calibration mode status */
 	public boolean calibrate = false;
-	// public boolean fromxml = false;
+
+    /** Flag indicating whether thumbnail has been generated */
 	boolean thumbnailGenerated = false;
 
+    /** ControlP5 instance for UI controls */
 	ControlP5 cp5;
+
+    /** Group containing media controls */
 	Group controlGroup;
+
+    /** Controls visibility state */
 	boolean controlsVisible = false;
 
+    /** Content generator for generative media */
     public LunaContentGenerator generator;
-    private final boolean isGenerative;
-    private float t;
-	/**
-	 * Constructs a new MediaItem.
-	 *
-	 * @param p          Parent Processing applet
-	 * @param filePath   Path to media file
-	 * @throws RuntimeException If media file cannot be loaded
-	 */
 
+    /** Flag indicating generative content */
+    private final boolean isGenerative;
+
+    /**
+     * Constructs a new MediaItem from a file path.
+     *
+     * @param p The parent PApplet instance
+     * @param filePath Path to media file
+     * @param screenIndex The screen index this media is assigned to
+     * @param mediaId Unique identifier for this media item
+     * @throws RuntimeException If media file cannot be loaded
+     */
 	public MediaItem(PApplet p, String filePath, int screenIndex, int mediaId) {
-		// PApplet.println("Start MediaItem");
 		this.p = p;
 		this.filePath = filePath;
-		// println("filePath " + filePath);
 		this.fileName = extractFileName(filePath); // NEED TO CHECK THIS!!!!!
-		// PApplet.println(fileName);
 		this.isVideo = isVideoFile(filePath);
-		// this.sceneIndex = sceneIndex;
 		this.assignedScreen = screenIndex;
 		this.mediaId = mediaId;
 		this.vm = new VidMap(p, fileName); // Pass fileName to vm
@@ -96,6 +120,13 @@ public class MediaItem {
         isGenerative = false;
 	}
 
+    /**
+     * Constructs a MediaItem from XML configuration.
+     * Recreates a media item from saved project data.
+     *
+     * @param p The parent PApplet instance
+     * @param mediaXML XML element containing media configuration
+     */
 	public MediaItem(PApplet p, XML mediaXML) {
 		// PApplet.println("Start MediaItem");
 		this.p = p;
@@ -114,36 +145,41 @@ public class MediaItem {
         isGenerative = false;
 	}
 
+    /**
+     * Constructs a generative MediaItem from a content generator.
+     *
+     * @param p The parent PApplet instance
+     * @param generator The content generator to use
+     * @param screenIndex The screen index this media is assigned to
+     * @param mediaId Unique identifier for this media item
+     */
     public MediaItem(PApplet p, LunaContentGenerator generator, int screenIndex, int mediaId) {
-        // PApplet.println("Start MediaItem");
         this.p = p;
         this.fileName = generator.getName();
         this.isVideo = false;
         isGenerative = true;
         this.generator = generator;
-        t = 0;
-        // this.sceneIndex = sceneIndex;
         this.assignedScreen = screenIndex;
         this.mediaId = mediaId;
         this.vm = new VidMap(p, fileName); // Pass fileName to vm
 
-        PApplet.println("=== MediaItem Constructor ===");
-        PApplet.println("Generator: " + generator.getName());
-        PApplet.println("Screen index: " + screenIndex);
-        PApplet.println("Media ID: " + mediaId);
-
         initVariables();
     }
 
+    /**
+     * Constructs a generative MediaItem from XML configuration.
+     * Recreates a generative media item from saved project data.
+     *
+     * @param p The parent PApplet instance
+     * @param generator The content generator to use
+     * @param mediaXML XML element containing media configuration
+     */
     public MediaItem(PApplet p, LunaContentGenerator generator, XML mediaXML) {
-        // PApplet.println("Start MediaItem");
         this.p = p;
         this.fileName = generator.getName();
         this.isVideo = false;
         isGenerative = true;
         this.generator = generator;
-        t = 0;
-        // this.sceneIndex = sceneIndex;
         this.assignedScreen = mediaXML.getInt("Screen");
         this.mediaId = mediaXML.getInt("id");
         this.vm = new VidMap(p, fileName); // Pass fileName to vm
@@ -152,15 +188,26 @@ public class MediaItem {
         loaded = true;
     }
 
+    /**
+     * Checks if this media item uses generative content.
+     *
+     * @return true if this is a generative media item, false for file-based media
+     */
     boolean isGenerative(){
         return isGenerative;
     }
 
+    /**
+     * Serializes the media item configuration to XML for project saving.
+     * Includes file information, screen assignment, homography data, and generator flag.
+     *
+     * @return XML element containing complete media configuration
+     * @see #arrayToXML(String, PVector[])
+     */
 	XML saveXML() {
 		XML xml = new XML("MediaItem");
 		xml.setString("name", fileName);
 		xml.setInt("Screen", assignedScreen);
-		// xml.setInt("Scene", sceneIndex);
 		xml.setInt("id", mediaId);
 		xml.setInt("width", mediaWidth);
 		xml.setInt("height", mediaHeight);
@@ -175,7 +222,13 @@ public class MediaItem {
 		return xml;
 	}
 
-	// Convert a PVector[] into XML
+    /**
+     * Converts a PVector array to XML format for serialization.
+     *
+     * @param tag The XML tag name for the array
+     * @param arr The PVector array to convert
+     * @return XML element containing the vector array data
+     */
 	XML arrayToXML(String tag, PVector[] arr) {
 		XML arrayXML = new XML(tag);
 		for (int i = 0; i < arr.length; i++) {
@@ -188,6 +241,14 @@ public class MediaItem {
 		return arrayXML;
 	}
 
+    /**
+     * Creates the UI control group for this media item.
+     * Includes buttons for calibration, input toggling, and video controls.
+     * The control group is positioned relative to the thumbnail.
+     *
+     * @see ControlP5
+     * @see Group
+     */
 	private void createControlGroup() {
 		cp5 = new ControlP5(p);
 		// Create a group for this media item's controls
@@ -200,7 +261,7 @@ public class MediaItem {
 
 		// Add controls to the group
 		cp5.addButton("calibrate" + controlGroup.getName()).setPosition(10, 10).setSize(60, 20)
-				.setCaptionLabel("Calibrate").setGroup(controlGroup).addCallback(new CallbackListener() {
+				.setCaptionLabel("Mapping").setGroup(controlGroup).addCallback(new CallbackListener() {
 					public void controlEvent(CallbackEvent event) {
 						if (event.getAction() == ControlP5.ACTION_RELEASE) {
 							// println("Bang released: " + event.getController().getName());
@@ -210,7 +271,7 @@ public class MediaItem {
 					}
 				});
 
-		cp5.addButton("input" + controlGroup.getName()).setPosition(80, 10).setSize(60, 20).setCaptionLabel("Input")
+		cp5.addButton("in/out" + controlGroup.getName()).setPosition(80, 10).setSize(60, 20).setCaptionLabel("Input")
 				.setGroup(controlGroup).addCallback(new CallbackListener() {
 					public void controlEvent(CallbackEvent event) {
 						if (event.getAction() == ControlP5.ACTION_RELEASE) {
@@ -257,14 +318,29 @@ public class MediaItem {
 		}
 	}
 
+    /**
+     * Shows the media item's control group.
+     * Makes the calibration and playback controls visible.
+     */
 	public void showControls() {
 		controlGroup.show();
 	}
 
+    /**
+     * Hides the media item's control group.
+     * Removes the calibration and playback controls from display.
+     */
 	public void hideControls() {
 		controlGroup.hide();
 	}
 
+    /**
+     * Sets the thumbnail position and updates control group placement.
+     * Positions the thumbnail and aligns the control group above it.
+     *
+     * @param x The x-coordinate for thumbnail placement
+     * @param y The y-coordinate for thumbnail placement
+     */
 	public void setThumbnailPosition(int x, int y) {
 		this.thumbnailX = x;
 		this.thumbnailY = y;
@@ -272,6 +348,11 @@ public class MediaItem {
 		controlGroup.setPosition(x, y); // Position above thumbnail
 	}
 
+    /**
+     * Initializes media variables and creates thumbnails.
+     * Loads media files, creates thumbnails, and sets up initial dimensions.
+     * For generative content, prepares the generator system.
+     */
 	void initVariables() {
 		// PApplet.println("initVariables");
 		if (isVideo) {
@@ -299,6 +380,13 @@ public class MediaItem {
 		createControlGroup();
 	}
 
+    /**
+     * Updates media item configuration from XML data.
+     * Restores homography transformation points from saved project data.
+     *
+     * @param xml XML element containing saved media configuration
+     * @see #arrayFromXML(XML)
+     */
 	void updateFromXML(XML xml) {
         PApplet.println(fileName);
 		PVector[] xyNew = arrayFromXML(xml.getChild("xyN"));
@@ -309,7 +397,13 @@ public class MediaItem {
 		updateHomography(xyNew, uvNew);
 	}
 
-	// Convert XML back into a PVector[]
+    /**
+     * Converts XML data back to a PVector array.
+     * Reconstructs homography points from saved project data.
+     *
+     * @param arrayXML XML element containing point data
+     * @return PVector array reconstructed from XML
+     */
 	PVector[] arrayFromXML(XML arrayXML) {
 		XML[] points = arrayXML.getChildren("point");
 		PVector[] arr = new PVector[points.length];
@@ -324,7 +418,13 @@ public class MediaItem {
 		return arr;
 	}
 
-	// Update an existing XML node with new PVector values
+    /**
+     * Updates an existing XML node with new PVector values.
+     * Modifies the XML structure to reflect current homography points.
+     *
+     * @param arrayXML The XML element to update
+     * @param arr The new PVector array values
+     */
 	void updateArrayXML(XML arrayXML, PVector[] arr) {
 		XML[] points = arrayXML.getChildren("point");
 		for (int i = 0; i < arr.length && i < points.length; i++) {
@@ -334,6 +434,18 @@ public class MediaItem {
 		}
 	}
 
+    /**
+     * Assigns this media item to a display with specific dimensions.
+     * Creates the media canvas, sets resolution, and configures the homography
+     * transformation for the target display. For generative content, calls
+     * the generator's setup method.
+     *
+     * @param w The width of the target display
+     * @param h The height of the target display
+     * @param screenIndex The index of the screen to assign to
+     * @see LunaContentGenerator#setup(int, int)
+     * @see VidMap#assignToDisplay(int, int)
+     */
 	public void assignToDisplay(int w, int h, int screenIndex) {
 		// PApplet.println("MediaItem Assigned to Display: " + screenIndex);
         PApplet.println("=== assignToDisplay ===");
@@ -360,22 +472,24 @@ public class MediaItem {
 		vm.assignToDisplay(resolutionX, resolutionY);
 	}
 
-	/**
-	 * Checks if media is successfully loaded.
-	 * 
-	 * @return true if media is ready for display
-	 */
+    /**
+     * Checks if media is successfully loaded and ready for display.
+     *
+     * @return true if media is ready for display, false otherwise
+     */
 	public boolean isLoaded() {
 		return loaded;
 	}
 
-	/**
-	 * Adjusts media display to maintain aspect ratio. Automatically updates
-	 * homography points to fit media properly.
-	 *
-	 * @param mediaWidth  Original media width
-	 * @param mediaHeight Original media height
-	 */
+    /**
+     * Adjusts media display to maintain aspect ratio.
+     * Automatically updates homography points to fit media properly within
+     * the display canvas while preserving the original aspect ratio.
+     *
+     * @param mediaWidth Original media width
+     * @param mediaHeight Original media height
+     * @see VidMap#updateHomographyFromPixel(PVector[], PVector[])
+     */
 	public void applyAspectRatioCorrection(int mediaWidth, int mediaHeight) {
 		// PApplet.println("applyAspectRatioCorrection");
 		float screenAspect = (float) mediaCanvas.width / mediaCanvas.height;
@@ -411,67 +525,147 @@ public class MediaItem {
 	}
 	// **🔹 vm Wrapper Methods**
 
+    /**
+     * Updates the homography transformation with new coordinate points.
+     * Wrapper method for VidMap's updateHomography functionality.
+     *
+     * @param xyNew New destination points for transformation
+     * @param uvNew New source points for transformation
+     * @see VidMap#updateHomography(PVector[], PVector[])
+     */
 	public void updateHomography(PVector[] xyNew, PVector[] uvNew) {
 		vm.updateHomography(xyNew, uvNew);
 	}
 
+    /**
+     * Toggles calibration mode for this media item.
+     * Wrapper method for VidMap's toggleCalibration functionality.
+     *
+     * @see VidMap#toggleCalibration()
+     */
 	public void toggleCalibration() {
 		vm.toggleCalibration();
 		this.calibrate = vm.calibrate;
 	}
 
+    /**
+     * Turns off calibration mode for this media item.
+     * Wrapper method for VidMap's offCalibration functionality.
+     *
+     * @see VidMap#offCalibration()
+     */
 	public void offCalibration() {
 		vm.offCalibration();
 		this.calibrate = vm.calibrate;
 	}
 
+    /**
+     * Turns on calibration mode for this media item.
+     * Wrapper method for VidMap's onCalibration functionality.
+     *
+     * @see VidMap#onCalibration()
+     */
 	public void onCalibration() {
 		vm.onCalibration();
 		this.calibrate = vm.calibrate;
 	}
 
+    /**
+     * Toggles input checking for homography points.
+     * Enables or disables mouse interaction with transformation points.
+     *
+     * @see VidMap#checkInput
+     */
 	public void toggleInput() {
 		vm.checkInput = !vm.checkInput;
 		// System.out.println("checkInput = " + vm.checkInput);
 	}
 
+    /**
+     * Checks hover state for homography points at specified coordinates.
+     * Wrapper method for VidMap's checkHover functionality.
+     *
+     * @param x The x-coordinate to check
+     * @param y The y-coordinate to check
+     * @see VidMap#checkHover(float, float)
+     */
 	public void checkHover(float x, float y) {
 		vm.checkHover(x, y);
 	}
 
+    /**
+     * Moves the hover point to specified coordinates.
+     * Wrapper method for VidMap's moveHoverPoint functionality.
+     *
+     * @param x The target x-coordinate
+     * @param y The target y-coordinate
+     * @see VidMap#moveHoverPoint(float, float)
+     */
 	public void moveHoverPoint(float x, float y) {
 		vm.moveHoverPoint(x, y);
 	}
 
+    /**
+     * Handles mouse release events for homography point interaction.
+     * Wrapper method for VidMap's mouseReleased functionality.
+     *
+     * @see VidMap#mouseReleased()
+     */
 	public void mouseReleased() {
 		vm.mouseReleased();
 	}
 
+    /**
+     * Resets the homography transformation to default state.
+     * Clears custom transformation points and reapplies aspect ratio correction.
+     *
+     * @see VidMap#resetHomography()
+     * @see #applyAspectRatioCorrection(int, int)
+     */
 	public void resetHomography() {
 		vm.resetHomography();
 		applyAspectRatioCorrection(mediaWidth, mediaHeight);
 	}
 
-	// Extracts the file name from the full path
+    /**
+     * Extracts the filename from a full file path.
+     *
+     * @param path The full file path
+     * @return The filename without directory path
+     */
 	private String extractFileName(String path) {
 		File file = new File(path);
 		return file.getName();
 	}
 
-	// Check if a file is a video
+    /**
+     * Checks if a file is a supported video format.
+     * Currently supports .mp4, .avi, and .mov file extensions.
+     *
+     * @param filename The filename to check
+     * @return true if the file is a supported video format
+     */
 	private boolean isVideoFile(String filename) {
 		filename = filename.toLowerCase();
 		return filename.endsWith(".mp4") || filename.endsWith(".avi") || filename.endsWith(".mov");
 	}
 
-	// Generate a thumbnail from a video (first frame) - Now manually callable
+    /**
+     * Generates a thumbnail image for this media item.
+     * For generative content: captures the current generator output.
+     * For images: creates a resized copy of the original image.
+     * For videos: captures the first available frame and resizes it.
+     * Sets thumbnailGenerated flag to true when complete.
+     *
+     * @see #thumbnailGenerated
+     * @see LunaContentGenerator#getGraphics()
+     */
 	public void generateThumbnail() {
         if (isGenerative) {
             thumbnail = p.createImage(mediaCanvas.width, mediaCanvas.height, PConstants.RGB);
             thumbnail.copy(this.generator.getGraphics(), 0, 0, this.generator.getGraphics().width, this.generator.getGraphics().height, 0, 0, thumbnail.width, thumbnail.height);
             thumbnail.loadPixels();
             thumbnail.resize(150, 100);
-            PApplet.println("Generative thumbnail");
         } else if (!isVideo) {
 			img.loadPixels();
 			thumbnail = p.createImage(img.width, img.height, PConstants.RGB);
@@ -490,14 +684,33 @@ public class MediaItem {
 		thumbnailGenerated = true;
 	}
 
+    /**
+     * Sets the preview area dimensions for homography point display.
+     * Wrapper method for VidMap's setPreviewArea functionality.
+     *
+     * @param px Preview area x-coordinate
+     * @param py Preview area y-coordinate
+     * @param pw Preview area width
+     * @param ph Preview area height
+     * @see VidMap#setPreviewArea(float, float, float, float)
+     */
 	public void setPreviewArea(float px, float py, float pw, float ph) {
 		vm.setPreviewArea(px, py, pw, ph);
 	}
 
-	/**
-	 * Renders the media with homography transformation. Handles both static images
-	 * and video playback.
-	 */
+    /**
+     * Renders the media with homography transformation.
+     * Handles static images, video playback, and generative content.
+     * For videos: reads new frames and manages thumbnail generation.
+     * For generative content: updates and draws the generator output.
+     * Applies homography transformation to the final output.
+     *
+     * @see Movie#available()
+     * @see Movie#read()
+     * @see LunaContentGenerator#update()
+     * @see LunaContentGenerator#getGraphics()
+     * @see VidMap#render(PGraphics2D)
+     */
 	public void render() {
 		mediaCanvas.beginDraw();
 		mediaCanvas.background(0); // Clear previous frame
@@ -532,12 +745,6 @@ public class MediaItem {
             //generator.draw(mediaCanvas,t);
             if (generator.getGraphics() != null) {
                 mediaCanvas.image(this.generator.getGraphics(), 0, 0);
-//                if (this.generator.getGraphics().width != mediaCanvas.width || this.generator.getGraphics().height != mediaCanvas.height) {
-//                    PApplet.println("Generator buffer: " + this.generator.getGraphics().width + "x" + this.generator.getGraphics().height);
-//                    PApplet.println("Media canvas: " + mediaCanvas.width + "x" + mediaCanvas.height);
-//                } else{
-//                    PApplet.println("All good" + this.generator.getGraphics().width + "x" + this.generator.getGraphics().height);
-//                }
                 if (!thumbnailGenerated) {
                     generateThumbnail();
                     //PApplet.println("Video thumbnail generated");
@@ -556,22 +763,15 @@ public class MediaItem {
 
 		mediaCanvas.endDraw();
 
-
-        // Test without any generator content first
-        //image(mediaCanvas, 0, 0);
-
-        // If the red rectangle appears stretched, the issue is in mediaCanvas creation or VidMap
-        // If it appears correct, the issue is in how we're handling the generator content
-
-		// Apply homography transformation using vm
 		if (vm != null) {
 			vm.render(mediaCanvas);
 		}
 	}
 
-	/**
-	 * Toggles video playback state. No effect on static images.
-	 */
+    /**
+     * Toggles video playback state.
+     * Plays if paused, pauses if playing. No effect on static images or generative content.
+     */
 	public void togglePlayback() {
 		if (isVideo) {
 			if (movie.isPlaying()) {
@@ -582,17 +782,21 @@ public class MediaItem {
 		}
 	}
 
-	/**
-	 * Toggles video loop mode.
-	 */
+    /**
+     * Toggles video loop mode.
+     * Switches between single playback and continuous looping for video content.
+     */
 	public void toggleLoop() {
 		isLooping = !isLooping;
 		// System.out.println("isLooping = " + isLooping);
 	}
 
-	/**
-	 * Starts media playback. For videos: begins playback according to loop mode.
-	 */
+    /**
+     * Starts media playback.
+     * For videos: begins playback from the start in single-play mode.
+     * Stops any existing playback before starting new playback.
+     * No effect on static images or generative content.
+     */
 	public void playMedia() {
 		if (isVideo) {
 			stopMedia(); // clean up old one first
@@ -602,6 +806,12 @@ public class MediaItem {
 		}
 	}
 
+    /**
+     * Starts media playback in loop mode.
+     * For videos: begins continuous looping playback.
+     * Stops any existing playback before starting new looped playback.
+     * No effect on static images or generative content.
+     */
     public void loopMedia() {
         if (isVideo) {
             stopMedia(); // clean up old one first
@@ -611,9 +821,12 @@ public class MediaItem {
         }
     }
 
-	/**
-	 * Stops media playback. For videos: stops and clears the display.
-	 */
+    /**
+     * Stops media playback and cleans up resources.
+     * For videos: stops playback, disposes native resources, and clears the display.
+     * Crucial for GStreamer cleanup to release native pipeline resources.
+     * No effect on static images or generative content.
+     */
 	public void stopMedia() {
 		if (isVideo && movie != null) {
 			//PApplet.println("Stop Media");
@@ -629,29 +842,61 @@ public class MediaItem {
 		}
 	}
 
+    /**
+     * Mutes video audio playback.
+     * Sets video volume to zero if the video is not currently playing.
+     * No effect on static images or generative content.
+     */
 	public void muteMedia() {
 		if (isVideo && movie != null && !movie.isPlaying()) {
 			movie.volume(0);
 		}
 	}
 
-	// Getters
+    /**
+     * Returns the full file path of the media.
+     *
+     * @return The complete file path, or null for generative content
+     */
 	public String getFilePath() {
 		return filePath;
 	}
 
+    /**
+     * Returns the filename of the media.
+     *
+     * @return The filename without path, or generator name for generative content
+     */
 	public String getFileName() {
 		return fileName;
 	}
 
+    /**
+     * Returns the thumbnail image for this media item.
+     *
+     * @return The thumbnail PImage, or null if not generated
+     * @see #thumbnailGenerated
+     */
 	public PImage getThumbnail() {
 		return thumbnail;
 	}
 
+    /**
+     * Checks if this media item is a video file.
+     *
+     * @return true if this is a video media item
+     */
 	public boolean isVideo() {
 		return isVideo;
 	}
 
+    /**
+     * Returns the transformed media canvas with homography applied.
+     * Wrapper method for VidMap's getMediaCanvas functionality.
+     *
+     * @return PGraphics2D containing the transformed media output
+     * @see VidMap#getMediaCanvas()
+     */
 	public PGraphics2D getMediaCanvas() {
 		return vm.getMediaCanvas();
 	}
