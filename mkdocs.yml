@@ -1,5 +1,5 @@
-site_name: Processing Library Template
-site_url: "https://processing.github.io/processing-library-template/"
+site_name: Luna Video Mapping Library
+site_url: "https://danielcorbani.github.io/Luna-Video-Mapping/"
 
 theme:
   name: material
@@ -19,7 +19,7 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.superfences
 
-copyright: MIT Licence.
+copyright: GPL 2.0 License.
 
 plugins:
   - search
@@ -27,7 +27,8 @@ plugins:
 
 nav:
   - Home: index.md
-  - Get Started: getting-started.md
-  - Develop: develop.md
-  - Release: release.md
-  - Troubleshooting: troubleshooting.md
+  - Installation: getting-started.md
+  - Examples: examples.md
+  - API Reference: reference.md
+  - Download: download.md
+  - Development: develop.md

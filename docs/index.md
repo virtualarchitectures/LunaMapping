@@ -1,42 +1,90 @@
-# Processing Library Template
+# Luna Video Mapping Library
 
-The Processing Library Template is a template to help developers of Processing libraries to develop and release.
-It can be found on Github at [https://github.com/processing/processing-library-template](https://github.com/processing/processing-library-template).
+> Professional video mapping made accessible for artists and creators
 
-![example sketch output](./example_sketch_output.png)
+![Luna Interface](UI_screenshot.png)
+*The Luna interface - designed for artists, powered by code*
 
-This documentation provides information on
+## 🎨 Made for Artists, Enhanced by Developers
 
-1. [Getting started](getting-started.md)
-2. [The development process](develop)
-3. [Releasing your library](release)
-4. [Troubleshooting](troubleshooting.md)
+Luna brings professional video mapping capabilities to Processing, with a focus on accessibility and creative expression.
 
-!!! note
-    This template is based on Gradle. If you are looking for the old Ant-based template, see processing/processing-library-template-ant
+### Key Features
 
-## References 
-Existing references for developing libraries for Processing can be found on the following Github wiki pages:
+**🎯 Artist-Friendly Interface**
+- Intuitive UI designed for performers and visual artists
+- No coding required for basic video mapping setups
+- Real-time preview and calibration
 
-- [https://github.com/processing/processing4/wiki/Library-Basics](https://github.com/benfry/processing4/wiki/Library-Basics)
-- [https://github.com/processing/processing4/wiki/Library-Guidelines](https://github.com/benfry/processing4/wiki/Library-Guidelines)
-- [https://github.com/processing/processing4/wiki/Library-Overview](https://github.com/benfry/processing4/wiki/Library-Overview)
+**⚡ Generative Content Integration**
+- Advanced users can create custom generative visuals
+- Seamlessly integrate code-based content with video mapping
+- Extend the system with your own creative algorithms
+
+**🔧 Professional Workflow**
+- Multi-scene management with smooth transitions
+- Support for multiple displays and projectors
+- Save and reload complex mapping setups
+
+## Quick Start
+
+```java
+/**
+ *
+ * Luna Video Mapping | https://luna.art.br/
+ * A Processing/Java library for Video Mapping.
+ *
+ * Created by Daniel Corbani
+ * GPL 2.0 licence: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html.en
+ *
+ */
 
 
-## Contributors
+/* Befor running this sketch, include all necessary media files
+ *        in the data folder. The library will find them and made
+ *        them available in the left panel.
+ */
+ 
+import paletai.mapping.*;
 
-This template was created as part of the 2024 New Beginnings (pr05) Grant from the
-[Processing Foundation](https://github.com/processing), to simplify the
-workflows for libraries, tools, and modes, mentored by [@Stefterv](https://github.com/stefterv).
+//Luna need this two complementary libraries to work
+//You can install them from the Processing Contrinution Manager
+import controlP5.*;
+import processing.video.*;
 
-It is based on and inspired by a number of Processing library templates, including:
 
-- [https://github.com/processing/processing-library-template-gradle](https://github.com/processing/processing-library-template-gradle)
-- [https://github.com/enkatsu/processing-library-template-gradle](https://github.com/enkatsu/processing-library-template-gradle)
-- [https://github.com/hamoid/processing-library-template/](https://github.com/hamoid/processing-library-template/)
+Project project;
 
-I wish to thank the developers of these repositories, who generously provided
-guidance and time. This template has been developed in collaboration with
-[@enkatsu](https://github.com/enkatsu).
+void setup() {
+  fullScreen(P2D, SPAN); //This should always be FullScreen, P2D and SPAN
+  project = new Project(this, "NewProject");  //Name your project here
+}
 
-The example library was developed by Stig Møller Hansen ([@stixan](https://github.com/stixan)).
+void draw() {
+  background(0);
+  project.render(mouseX, mouseY);
+}
+
+// press any key to save your project
+// press 'space bar' to go to next scene
+void keyReleased() {
+  project.keyreleased(key, keyCode);  // call method on the instance
+}
+
+void mouseDragged() {
+  project.moveHoverPoint(mouseX, mouseY);  // Move hovered point while dragging
+}
+```
+
+## Who is Luna For?
+
+- **Visual Artists** creating immersive installations
+- **Performers** needing real-time video mapping  
+- **Educators** teaching projection mapping concepts
+- **Developers** extending video mapping capabilities
+
+## Get Started
+
+Ready to create? [Install Luna](getting-started.md) and start mapping in minutes.
+
+Explore [examples](examples.md) or dive into the [API reference](reference.md).

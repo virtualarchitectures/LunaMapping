@@ -30,7 +30,7 @@ public class BouncingBall implements LunaContentGenerator {
     pgPaint.background(80,20,20);
     pgPaint.noStroke();
     pgPaint.fill(200);
-    pgPaint.ellipse(x,y,40,40);
+    pgPaint.ellipse(x,y,100,100);
     pgPaint.endDraw();
     x += vx;
     y += vy;

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<generators name="generators" type="Luna Video Mapping project">
+  <Screens>
+    <Screen id="0"/>
+  </Screens>
+  <Scenes>
+    <Scene>
+      <MediaItem Screen="0" height="1920" id="0" isGenerator="0" name="emptyRoad.jpg" width="1280">
+        <xyN>
+          <point index="0" x="0.0" y="1.0"/>
+          <point index="1" x="1.0" y="1.0"/>
+          <point index="2" x="1.0" y="0.0"/>
+          <point index="3" x="0.0" y="0.0"/>
+        </xyN>
+        <uvN>
+          <point index="0" x="0.0832386" y="0.8363637"/>
+          <point index="1" x="0.4079545" y="0.9022727"/>
+          <point index="2" x="0.4373579" y="0.36818182"/>
+          <point index="3" x="0.060227238" y="0.35227275"/>
+        </uvN>
+      </MediaItem>
+      <MediaItem Screen="0" height="1080" id="1" isGenerator="1" name="Bouncing Ball" width="1920">
+        <xyN>
+          <point index="0" x="0.0" y="1.0"/>
+          <point index="1" x="1.0" y="1.0"/>
+          <point index="2" x="1.0" y="0.0"/>
+          <point index="3" x="0.0" y="0.0"/>
+        </xyN>
+        <uvN>
+          <point index="0" x="0.5992424" y="0.6856061"/>
+          <point index="1" x="0.8677083" y="0.6886364"/>
+          <point index="2" x="0.88560605" y="0.38712114"/>
+          <point index="3" x="0.56392044" y="0.33863634"/>
+        </uvN>
+      </MediaItem>
+    </Scene>
+    <Scene/>
+    <Scene/>
+  </Scenes>
+</generators>
