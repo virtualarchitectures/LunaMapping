@@ -75,7 +75,7 @@ Interface for creating custom generative content.
 
 For detailed method signatures, parameters, and usage examples, see the full Javadoc documentation:
 
-[View Complete Javadoc](../reference/index.html)
+[View Complete Javadoc](reference/index.html)
 
 ## Usage Patterns
 
