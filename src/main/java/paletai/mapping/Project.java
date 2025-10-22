@@ -610,7 +610,7 @@ public class Project {
      * @see Screen#unassign()
      */
 	void assignDisplay(Rectangle b) {
-		if (screens.get(currentScreen).isAssigned == false) {
+		if (!screens.get(currentScreen).isAssigned) {
 			for (Screen screen : screens) {
 				if (screen.x == b.x) { // check if this screen is assigned to display in question
 					screen.unassign();
@@ -1195,7 +1195,7 @@ public class Project {
 			canvaUI.fill(200, 100);
 			canvaUI.textSize(48);
 			canvaUI.textAlign(PConstants.CENTER, PConstants.CENTER);
-			canvaUI.text(index, (hx2 + hx1) / 2, (hy1 + hy2) / 2);
+			canvaUI.text(index, (float) (hx2 + hx1) / 2, (float) (hy1 + hy2) / 2);
 			// canvaUI.text(previewAreaWidth, (hx2 + hx1)/2, (hy1 +hy2)/2);
 		}
 
