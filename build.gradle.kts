@@ -107,7 +107,7 @@ dependencies {
     // To add a dependency on a Processing library that is installed locally,
     // uncomment the line below, and replace <library folder> with the location of that library
      compileOnly(fileTree("dependencies"))
-     compileOnly(fileTree("dependencies"))
+     //compileOnly(fileTree("dependencies"))
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
