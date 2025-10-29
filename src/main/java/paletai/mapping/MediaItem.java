@@ -100,6 +100,14 @@ public class MediaItem {
     private final boolean isGenerative;
 
     /**
+     * Event flags for homography copy/paste operations.
+     * When true, indicates that the UI has requested this action.
+     * Should be checked and reset by the managing class (Scene/Project).
+     */
+    public boolean copyHomographyRequested = false;
+    public boolean pasteHomographyRequested = false;
+
+    /**
      * Constructs a new MediaItem from a file path.
      *
      * @param p The parent PApplet instance
@@ -271,7 +279,7 @@ public class MediaItem {
 					}
 				});
 
-		cp5.addButton("in/out" + controlGroup.getName()).setPosition(80, 10).setSize(60, 20).setCaptionLabel("Input")
+		cp5.addButton("in/out" + controlGroup.getName()).setPosition(80, 10).setSize(60, 20).setCaptionLabel("in/out")
 				.setGroup(controlGroup).addCallback(new CallbackListener() {
 					public void controlEvent(CallbackEvent event) {
 						if (event.getAction() == ControlP5.ACTION_RELEASE) {
@@ -282,8 +290,34 @@ public class MediaItem {
 					}
 				});
 
-		// Video controls
 
+        cp5.addButton("copyHomography" + controlGroup.getName())
+                .setPosition(10, 40) // Position below existing buttons
+                .setSize(60, 20)
+                .setCaptionLabel("Copy")
+                .setGroup(controlGroup)
+                .addCallback(new CallbackListener() {
+                    public void controlEvent(CallbackEvent event) {
+                        if (event.getAction() == ControlP5.ACTION_RELEASE) {
+                            copyHomographyRequested = true;
+                        }
+                    }
+                });
+
+        cp5.addButton("pasteHomography" + controlGroup.getName())
+                .setPosition(80, 40)
+                .setSize(60, 20)
+                .setCaptionLabel("Paste")
+                .setGroup(controlGroup)
+                .addCallback(new CallbackListener() {
+                    public void controlEvent(CallbackEvent event) {
+                        if (event.getAction() == ControlP5.ACTION_RELEASE) {
+                            pasteHomographyRequested = true;
+                        }
+                    }
+                });
+
+        // Video controls
 		if (isVideo) {
 			cp5.addButton("play" + controlGroup.getName()).setPosition(10, 80).setSize(30, 20).setCaptionLabel("Play")
 					.setGroup(controlGroup).addCallback(new CallbackListener() {

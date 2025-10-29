@@ -13,10 +13,10 @@
           <point index="3" x="0.0" y="0.0"/>
         </xyN>
         <uvN>
-          <point index="0" x="0.106249966" y="0.82045454"/>
-          <point index="1" x="0.7684659" y="0.93863636"/>
-          <point index="2" x="0.7646306" y="0.22499985"/>
-          <point index="3" x="0.15610792" y="0.24772727"/>
+          <point index="0" x="0.18806815" y="0.8568182"/>
+          <point index="1" x="0.7390625" y="0.85454535"/>
+          <point index="2" x="0.6892045" y="0.17954546"/>
+          <point index="3" x="0.2686079" y="0.16136408"/>
         </uvN>
       </MediaItem>
     </Scene>
@@ -50,5 +50,22 @@
         </uvN>
       </MediaItem>
     </Scene>
+    <Scene>
+      <MediaItem Screen="0" height="811" id="0" isGenerator="0" name="painting1.jpg" width="640">
+        <xyN>
+          <point index="0" x="0.0" y="1.0"/>
+          <point index="1" x="1.0" y="1.0"/>
+          <point index="2" x="1.0" y="0.0"/>
+          <point index="3" x="0.0" y="0.0"/>
+        </xyN>
+        <uvN>
+          <point index="0" x="0.18806815" y="0.8568182"/>
+          <point index="1" x="0.7390625" y="0.85454535"/>
+          <point index="2" x="0.6892045" y="0.17954546"/>
+          <point index="3" x="0.2686079" y="0.16136408"/>
+        </uvN>
+      </MediaItem>
+    </Scene>
+    <Scene/>
   </Scenes>
 </NewProject>

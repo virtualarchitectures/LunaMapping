@@ -207,6 +207,8 @@ public class VidMap {
 		for (int i = 0; i < 4; i++) {
 			xyP[i] = Normal2Pixel(xyNew[i]);
 			uvP[i] = Normal2Pixel(uvNew[i]);
+            xyN[i] = Pixel2Nornal(xyP[i]);
+            uvN[i] = Pixel2Nornal(uvP[i]);
 		}
 
 		for (int i = 0; i < uvN.length; i++) {
@@ -321,7 +323,7 @@ public class VidMap {
 			// Draw input calibration (xyN points) on preview
 			p.beginShape();
 			p.stroke(0, 0, 255);
-			p.strokeWeight(2);
+			p.strokeWeight(4);
 			p.noFill();
 			for (int i = 0; i < xyN.length; i++) {
 				PVector previewPoint = normalizedToPreview(xyN[i]);
@@ -597,4 +599,6 @@ public class VidMap {
 	public void mouseReleased() {
 		movingImage = false;
 	}
+
+
 }

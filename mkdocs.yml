@@ -31,4 +31,4 @@ nav:
   - Examples: examples.md
   - API Reference: reference.md
   - Download: download.md
-  - Development: develop.md
+#  - Development: develop.md

@@ -12,6 +12,7 @@ import controlP5.*;
 import paletai.generators.LunaContentGenerator;
 import processing.data.XML;
 import java.lang.reflect.*;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -102,6 +103,13 @@ public class Project {
 
     /** Available content generators discovered through reflection */
     private ArrayList<LunaContentGenerator> availableGenerators;
+
+    /**
+     * Clipboard for storing homography configuration to be copied between MediaItems
+     */
+    private PVector[] copiedXY = null;
+    private PVector[] copiedUV = null;
+    private String copiedConfigName = "";
 
     /**
      * Constructs a new Project instance with the specified name.
@@ -678,10 +686,6 @@ public class Project {
         delBtn.getCaptionLabel()
                 .setFont(myFont)
                 .align(ControlP5.CENTER, ControlP5.CENTER);
-//        addBtn.setColorBackground(mainApplet.color(60, 60, 60));
-//        addBtn.setColorForeground(mainApplet.color(90, 90, 90));
-//        addBtn.setColorActive(mainApplet.color(120, 200, 120));
-//        addBtn.setColorLabel(mainApplet.color(255));
 
         delBtn.setColorBackground(mainApplet.color(150, 60, 60));
         delBtn.setColorForeground(mainApplet.color(200, 90, 90));
@@ -1062,6 +1066,9 @@ public class Project {
 		drawUI();
 		updateCP5();
 
+        // Process homography requests before rendering
+        processHomographyRequests();
+
 		if (isTransitioning) {
 			// Update transition progress
 			transitionProgress = (float) (mainApplet.millis() - transitionStartTime) / transitionDuration;
@@ -1309,5 +1316,122 @@ public class Project {
 		sceneRadio.activate(currentScene);
 	}
 
+    /**
+     * Copies the homography configuration from a source MediaItem to the project clipboard.
+     * Stores the corner points (xyN) and texture coordinates (uvN) for later pasting.
+     *
+     * @param source The MediaItem to copy homography configuration from
+     * @see #pasteHomography(MediaItem)
+     * @see MediaItem#vm
+     */
+    public void copyHomography(MediaItem source) {
+        if (source != null && source.vm != null && source.vm.xyN != null && source.vm.uvN != null) {
+            this.copiedXY = deepCopyPVectorArray(source.vm.xyN);
+            this.copiedUV = deepCopyPVectorArray(source.vm.uvN);
+            this.copiedConfigName = source.getFileName();
+            PApplet.println("✓ Copied homography configuration from: " + copiedConfigName);
+        } else {
+            PApplet.println("✗ Cannot copy homography: source is invalid or not calibrated");
+        }
+    }
+
+    /**
+     * Pastes the previously copied homography configuration to a target MediaItem.
+     * Applies the stored corner points and texture coordinates to the target's VidMap.
+     * Requires that copyHomography() was called first with a valid configuration.
+     *
+     * @param target The MediaItem to apply the homography configuration to
+     * @see #copyHomography(MediaItem)
+     * @see MediaItem#updateHomography(PVector[], PVector[])
+     */
+    public void pasteHomography(MediaItem target) {
+        if (target != null && copiedXY != null && copiedUV != null) {
+            if (target.vm != null) {
+                //PApplet.println("Handles before: " + Arrays.toString(target.vm.xyN));
+                target.updateHomography(deepCopyPVectorArray(copiedXY), deepCopyPVectorArray(copiedUV));
+                //PApplet.println("Handles after: " + Arrays.toString(target.vm.xyN));
+                //PApplet.println("✓ Pasted homography configuration to: " + target.getFileName());
+                PApplet.println("  Source: " + copiedConfigName);
+            } else {
+                PApplet.println("✗ Cannot paste homography: target VidMap is not initialized");
+            }
+        } else {
+            if (copiedXY == null || copiedUV == null) {
+                PApplet.println("✗ Cannot paste homography: no configuration copied to clipboard");
+            } else {
+                PApplet.println("✗ Cannot paste homography: target is null");
+            }
+        }
+    }
+
+    /**
+     * Creates a deep copy of a PVector array to prevent reference sharing.
+     * Essential for ensuring copied homography points are independent of the source.
+     *
+     * @param source The original PVector array to copy
+     * @return A new array containing copies of all PVectors, or null if source is null
+     * @see PVector#copy()
+     */
+    private PVector[] deepCopyPVectorArray(PVector[] source) {
+        if (source == null) return null;
+        PVector[] copy = new PVector[source.length];
+        for (int i = 0; i < source.length; i++) {
+            if (source[i] != null) {
+                copy[i] = source[i].copy();
+            }
+        }
+        return copy;
+    }
+
+    /**
+     * Gets the current status of the homography clipboard for UI display.
+     * Indicates whether a configuration is available and from which MediaItem.
+     *
+     * @return A string describing the clipboard status, suitable for UI display
+     * @see #copyHomography(MediaItem)
+     */
+    public String getClipboardStatus() {
+        if (copiedConfigName.isEmpty()) {
+            return "Clipboard: Empty";
+        } else {
+            return "Clipboard: " + copiedConfigName;
+        }
+    }
+
+    /**
+     * Clears the homography clipboard, freeing the stored configuration.
+     * Useful for resetting the copy/paste system or managing memory.
+     */
+    public void clearHomographyClipboard() {
+        this.copiedXY = null;
+        this.copiedUV = null;
+        this.copiedConfigName = "";
+        PApplet.println("✓ Homography clipboard cleared");
+    }
+
+    /**
+     * Processes homography copy/paste requests from all MediaItems in the current scene.
+     * Should be called regularly (e.g., in render loop) to handle UI events.
+     *
+     * @see MediaItem#copyHomographyRequested
+     * @see MediaItem#pasteHomographyRequested
+     */
+    public void processHomographyRequests() {
+        Scene current = scenes.get(currentScene);
+
+        for (MediaItem media : current.mediaItems) {
+            // Handle copy requests
+            if (media.copyHomographyRequested) {
+                copyHomography(media);
+                media.copyHomographyRequested = false; // Reset flag
+            }
+
+            // Handle paste requests
+            if (media.pasteHomographyRequested) {
+                pasteHomography(media);
+                media.pasteHomographyRequested = false; // Reset flag
+            }
+        }
+    }
 
 }
