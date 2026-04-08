@@ -107,6 +107,9 @@ public class Project {
     private int transitionDuration = 2000; // 2 second transition
     private float transitionProgress = 0;
 
+    /** Whether spacebar loops back from the last scene to the first */
+    private boolean loopScenes = false;
+
     /** Available content generators discovered through reflection */
     private ArrayList<LunaContentGenerator> availableGenerators;
 
@@ -920,6 +923,30 @@ public class Project {
 	        }
 	    });
 
+	    // ---- Loop toggle button ----
+	    Toggle loopToggle = cp5.addToggle("Loop Scenes")
+	        .setPosition(r + 120, r)
+	        .setSize(40, screenButtonsArea)
+	        .setCaptionLabel("Loop")
+	        .setValue(loopScenes)
+	        .setGroup(sceneList);
+
+	    loopToggle.getCaptionLabel()
+	        .setFont(myFont)
+	        .align(ControlP5.CENTER, ControlP5.CENTER);
+	    loopToggle.setColorBackground(mainApplet.color(60, 60, 120));
+	    loopToggle.setColorForeground(mainApplet.color(90, 90, 160));
+	    loopToggle.setColorActive(mainApplet.color(100, 100, 220));
+	    loopToggle.setColorLabel(mainApplet.color(255));
+
+	    loopToggle.addCallback(new CallbackListener() {
+	        public void controlEvent(CallbackEvent event) {
+	            if (event.getAction() == ControlP5.ACTION_RELEASE) {
+	                loopScenes = loopToggle.getState();
+	            }
+	        }
+	    });
+
 	    // ---- Scene selector (radio button) ----
 	    if (sceneRadio != null) sceneRadio.remove();
 
@@ -1361,12 +1388,11 @@ public class Project {
 	public void keyreleased(char k, int kc) {
 		saveToFile();
 		if (k == ' ' && !isTransitioning) {
-//			sceneRadio.deactivate(currentScene);
-//			currentScene = PApplet.constrain(currentScene+1,0,scenes.size()-1);
-//			sceneRadio.activate(currentScene);
-//			selectScene(currentScene);
-			startTransition(currentScene + 1);
-			//PApplet.println("Next scene : currentScene + 1");
+			int target = currentScene + 1;
+			if (target >= scenes.size() && loopScenes) {
+				target = 0;
+			}
+			startTransition(target);
 		}
 	}
 
