@@ -125,6 +125,11 @@ public class Project {
     private PVector[] copiedUV = null;
     private String copiedConfigName = "";
 
+    /** Cached fonts — created once to avoid per-frame and per-call allocation */
+    PFont uiFont14;
+    PFont uiFont16;
+    PFont uiFont20;
+
     /**
      * Constructs a new Project instance with the specified name.
      * Initializes displays, scans for media files and generators, loads configuration,
@@ -143,6 +148,9 @@ public class Project {
 		mainApplet = p;
 		projectName = (name == null || name.trim().isEmpty()) ? "untitled" : name.trim();
 		cp5 = new ControlP5(mainApplet); // must be called before creating buttons;
+		uiFont14 = mainApplet.createFont("NeueMachina-Regular.otf", 14, true);
+		uiFont16 = mainApplet.createFont("NeueMachina-Regular.otf", 16, true);
+		uiFont20 = mainApplet.createFont("NeueMachina-Regular.otf", 20, true);
 		initializeDisplays();
 		mainApplet.image(canvaUI, 0, 0);
 		scanMediaFiles();
@@ -624,8 +632,7 @@ public class Project {
 	        .disableCollapse()
 	        .hideBar();
 
-	    // font (could be declared once globally instead)
-	    PFont myFont = mainApplet.createFont("NeueMachina-Regular.otf", 14, true);
+	    PFont myFont = uiFont14;
 
 	    // add one button per available display
 	    for (int i = 0; i < availableDisplays.size(); i++) {
@@ -693,15 +700,14 @@ public class Project {
      */
 	void createScreenButtons() {
 		if (screenList != null) screenList.remove();
-		
+
 		screenList = cp5.addGroup("Screen List")
 				.setPosition(hx1 + r, hy2 - 2 * r - screenButtonsArea)
 				.setBackgroundHeight(screenButtonsArea)
 				.disableCollapse();
 				//.hideBar();
 
-        PFont myFont = mainApplet.createFont("NeueMachina-Regular.otf", 14, true);
-		//PFont myFont = mainApplet.createFont("Arial", 14, true);
+        PFont myFont = uiFont14;
 
         // ---- Add Screen button ----
         Button showBtn = cp5.addButton("Show Screen")
@@ -812,9 +818,8 @@ public class Project {
 				.setColorBackground(mainApplet.color(100))
                 .setColorForeground(mainApplet.color(60)).hideBar();
 
-        PFont myFont = mainApplet.createFont("NeueMachina-Regular.otf", 14, true);
-        //PFont myFont = mainApplet.createFont("Arial", 14, true);
-		
+        PFont myFont = uiFont14;
+
 		// Style the new radio button's label
 		screenRadio.getItem(optionName)
 			.getCaptionLabel()
@@ -874,8 +879,7 @@ public class Project {
 
 
 	 // load a font (you could make this global so it’s reused)
-	    //PFont myFont = mainApplet.createFont("Arial", 14, true);
-        PFont myFont = mainApplet.createFont("NeueMachina-Regular.otf", 14, true);
+        PFont myFont = uiFont14;
 	    sceneList.getCaptionLabel()
 	    .setFont(myFont)
 	    .setColor(120)
@@ -1053,8 +1057,7 @@ public class Project {
 	    Toggle t = sceneRadio.getItem(optionName);
 
 	    // ---- Styling label ----
-        PFont myFont = mainApplet.createFont("NeueMachina-Regular.otf", 20, true);
-        //PFont myFont = mainApplet.createFont("Arial", 20, true); // load once globally if you prefer
+        PFont myFont = uiFont20;
 //
 	    t.getCaptionLabel().setFont(myFont);
 	    t.setColorLabel(mainApplet.color(255)); // label text color (white)
@@ -1121,9 +1124,7 @@ public class Project {
 	    mediaList.getCaptionLabel().setVisible(false);
 	    mediaList.hideBar();
 
-	    // Load a custom font (adjust name/size to your liking)
-        PFont myFont = mainApplet.createFont("NeueMachina-Regular.otf", 16, true);
-        //PFont myFont = mainApplet.createFont("Arial", 12, true);
+        PFont myFont = uiFont16;
 
 	    for (int i = 0; i < mediaFiles.size(); i++) {
 	        String name = mediaFiles.get(i);
@@ -1173,13 +1174,9 @@ public class Project {
                 .setBackgroundHeight(hy2 - hy1 - 2 * r)
                 .disableCollapse();
 
-        PFont myFont = mainApplet.createFont("NeueMachina-Regular.otf", 14, true);
+        PFont myFont = uiFont14;
         generatorList.getCaptionLabel().setFont(myFont).setVisible(false).toUpperCase(false);
         generatorList.hideBar();
-
-        // Load a custom font (adjust name/size to your liking)
-        //PFont myFont = mainApplet.createFont("NeueMachina-Regular.otf", 14, true);
-        //PFont myFont = mainApplet.createFont("Arial", 12, true);
 
         for (int i = 0; i < availableGenerators.size(); i++) {
             LunaContentGenerator generator = availableGenerators.get(i);
@@ -1302,7 +1299,7 @@ public class Project {
      * @see #drawTimelinePanel(int)
      */
 	void drawUI() {
-        PFont myFont = mainApplet.createFont("NeueMachina-Regular.otf", 20, true);
+        PFont myFont = uiFont20;
 		canvaUI.beginDraw();
 		canvaUI.background(33);
 
